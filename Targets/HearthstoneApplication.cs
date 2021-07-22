@@ -22,7 +22,7 @@ namespace hearthstone_ex.Targets
             {
                 if (ndpKey != null && ndpKey.GetValue("Release") != null)
                 {
-                    var releaseKey = (int) ndpKey.GetValue("Release");
+                    var releaseKey = (int)ndpKey.GetValue("Release");
                     if (releaseKey >= 528040)
                         return "4.8 or later";
                     if (releaseKey >= 461808)
@@ -89,20 +89,6 @@ namespace hearthstone_ex.Targets
             LogFrameworkVersion(debug_info);
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(ExceptionReportInitialize))]
-        public static void ExceptionReportInitialize()
-        {
-            var reporter = ExceptionReporter.Get();
-
-            if (reporter.IsInDebugMode)
-                Logger.Message($"{reporter} already in debug mode");
-            else
-            {
-                Logger.Message($"{reporter} isn't in debug mode, forcing...");
-                reporter.IsInDebugMode = true;
-            }
-        }
 
         private static ApplicationMode? m_applicationModeOwerriden;
 
