@@ -13,15 +13,16 @@ namespace hearthstone_ex.Targets
     [HarmonyPatch(typeof(Ent))]
     public class Entity : LoggerGui.Static<Entity>
     {
+        private static bool UseRealGoldenTag()
+        {
+            return SpectatorManager.Get().IsSpectatingOrWatching || GameMgr.Get().IsBattlegrounds();
+        }
+
         private static void SetGoldenTag([NotNull] Ent __instance, [NotNull] CallerInfo info)
         {
             if (__instance.GetPremiumType() != TAG_PREMIUM.NORMAL)
                 return;
 
-            if (SpectatorManager.Get().IsSpectatingOrWatching)
-                return;
-            if (GameMgr.Get().IsBattlegrounds())
-                return;
             if (__instance.GetControllerId() != Gs.Get().GetFriendlySidePlayer().GetPlayerId())
             {
                 Logger.Message($"({__instance}) not owned", info);
@@ -36,7 +37,7 @@ namespace hearthstone_ex.Targets
             //if (!HavePremiumTag(__instance.GetEntityDef(), CUSTOM_PREMIUM_TAG))//all golden except coin
             //    return;
 
-            var tag_premium=__instance.GetEntityDef().GetIdealPremiumTag();
+            var tag_premium = __instance.GetEntityDef().GetIdealPremiumTag();
             __instance.SetTag(GAME_TAG.PREMIUM, tag_premium);
 
             Logger.Message($"({__instance}) set to {tag_premium}", info);
@@ -46,6 +47,9 @@ namespace hearthstone_ex.Targets
         [HarmonyPatch(nameof(Ent.OnFullEntity))]
         public static void OnFullEntity([NotNull] Ent __instance)
         {
+            if (UseRealGoldenTag())
+                return;
+
             //golden cards while game starts
             SetGoldenTag(__instance, new CallerInfoMin());
         }
@@ -54,6 +58,9 @@ namespace hearthstone_ex.Targets
         [HarmonyPatch(nameof(Ent.OnShowEntity))]
         public static void OnShowEntity([NotNull] Ent __instance)
         {
+            if (UseRealGoldenTag())
+                return;
+
             //golden card when it taken from the deck, played by enemy, etc...
             SetGoldenTag(__instance, new CallerInfoMin());
         }
@@ -64,6 +71,10 @@ namespace hearthstone_ex.Targets
         {
             if (___m_transformPowersProcessed.Contains(changeEntity))
                 return;
+            if (UseRealGoldenTag())
+                return;
+            //if (HistoryManager.m_lastPlayedEntity == null)
+            //    return;
 
             /*
              how it works:
