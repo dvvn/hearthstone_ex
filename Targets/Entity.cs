@@ -15,8 +15,7 @@ namespace hearthstone_ex.Targets
     {
         private static void SetGoldenTag([NotNull] Ent __instance, [NotNull] CallerInfo info)
         {
-            var __result = __instance.GetPremiumType();
-            if (__result != TAG_PREMIUM.NORMAL)
+            if (__instance.GetPremiumType() != TAG_PREMIUM.NORMAL)
                 return;
 
             if (SpectatorManager.Get().IsSpectatingOrWatching)
@@ -37,10 +36,10 @@ namespace hearthstone_ex.Targets
             //if (!HavePremiumTag(__instance.GetEntityDef(), CUSTOM_PREMIUM_TAG))//all golden except coin
             //    return;
 
-            __result = __instance.GetEntityDef().GetIdealPremiumTag();
-            __instance.SetTag(GAME_TAG.PREMIUM, __result);
+            var tag_premium=__instance.GetEntityDef().GetIdealPremiumTag();
+            __instance.SetTag(GAME_TAG.PREMIUM, tag_premium);
 
-            Logger.Message($"({__instance}) set to {__result}", info);
+            Logger.Message($"({__instance}) set to {tag_premium}", info);
         }
 
         [HarmonyPostfix]
