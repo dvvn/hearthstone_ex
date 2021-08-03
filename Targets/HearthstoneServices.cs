@@ -11,7 +11,7 @@ using AchievementManagerHs = Hearthstone.Progression.AchievementManager;
 
 namespace hearthstone_ex.Targets
 {
-    public partial class HearthstoneServices : LoggerConsole.Static<HearthstoneServices>
+    public partial class HearthstoneServices : LoggerFile.Static<HearthstoneServices>
     {
         private sealed class TempInternalAppMode : IService
         {

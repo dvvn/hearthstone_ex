@@ -146,14 +146,14 @@ namespace hearthstone_ex.Utils
         public void Message(object message, [NotNull] CallerInfo info) => this.Message(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
     }
 
-    public class LoggerConsole : LoggerBase
+    public class LoggerFile : LoggerBase
     {
         public class Static<T>
         {
-            public static readonly LoggerBase Logger = new LoggerConsole(typeof(T));
+            public static readonly LoggerBase Logger = new LoggerFile(typeof(T));
         }
 
-        public LoggerConsole([NotNull] Type type) : base(type) { }
+        public LoggerFile([NotNull] Type type) : base(type) { }
 
         protected override void ErrorImpl(object msg)
         {

@@ -6,7 +6,7 @@ using Control = Hearthstone.ExceptionReporterControl;
 namespace hearthstone_ex.Targets
 {
     [HarmonyPatch(typeof(Control))]
-    public class ExceptionReporterControl : LoggerConsole.Static<Control>
+    public class ExceptionReporterControl : LoggerFile.Static<Control>
     {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Control.ExceptionReportInitialize))]

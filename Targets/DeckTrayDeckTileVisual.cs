@@ -134,7 +134,7 @@ namespace hearthstone_ex.Targets
                 return true;
             }
 
-            if (!deck_tile_actor.GetEntityDef().HavePremiumTag(TAG_PREMIUM.GOLDEN))
+            if (!CardInfo.HavePremiumType(deck_tile_actor.GetEntity().GetCardId(), TAG_PREMIUM.GOLDEN))
             {
                 LogMessage(deck_tile_actor, $"Material forced to {NORMAL_TAG}, because no others available!", info_full);
                 return true;
@@ -167,7 +167,7 @@ namespace hearthstone_ex.Targets
                 return NORMAL_TAG;
             }
 
-            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetIdealPremiumTag();
+            var IDEAL_TAG = deck_tile_actor.GetEntity().GetBestPossiblePremiumType();
             if (DEFAULT_TAG != NORMAL_TAG && DEFAULT_TAG != IDEAL_TAG)
             {
                 //add only non-CUSTOM_TAG's here

@@ -82,6 +82,7 @@
   <ItemGroup>
     <Reference Include="0Harmony, Version=2.5.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\HarmonyX.2.5.3\lib\net45\0Harmony.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -95,9 +96,11 @@
     </Reference>
     <Reference Include="blizzard.bgsclient">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\blizzard.bgsclient.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="blizzard.bgssdk">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\blizzard.bgssdk.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Blizzard.T5.AssetManager, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -146,6 +149,7 @@
     </Reference>
     <Reference Include="Google.Protobuf">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Google.Protobuf.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -154,15 +158,19 @@
     </Reference>
     <Reference Include="Mono.Cecil, Version=0.11.4.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
       <HintPath>packages\Mono.Cecil.0.11.4\lib\net40\Mono.Cecil.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Mono.Cecil.Mdb, Version=0.11.4.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
       <HintPath>packages\Mono.Cecil.0.11.4\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Mono.Cecil.Pdb, Version=0.11.4.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
       <HintPath>packages\Mono.Cecil.0.11.4\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Mono.Cecil.Rocks, Version=0.11.4.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
       <HintPath>packages\Mono.Cecil.0.11.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Mono.Posix">
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Mono.Posix.dll</HintPath>
@@ -174,9 +182,11 @@
     </Reference>
     <Reference Include="MonoMod.RuntimeDetour, Version=21.7.22.3, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\MonoMod.RuntimeDetour.21.7.22.3\lib\net40\MonoMod.RuntimeDetour.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="MonoMod.Utils, Version=21.7.22.3, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\MonoMod.Utils.21.7.22.3\lib\net40\MonoMod.Utils.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

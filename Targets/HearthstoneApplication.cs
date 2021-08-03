@@ -12,7 +12,7 @@ using App = Hearthstone.HearthstoneApplication;
 namespace hearthstone_ex.Targets
 {
     [HarmonyPatch(typeof(App))]
-    public class HearthstoneApplication : LoggerConsole.Static<HearthstoneApplication>
+    public class HearthstoneApplication : LoggerFile.Static<HearthstoneApplication>
     {
         [NotNull]
         private static string GetFrameworkVersion()

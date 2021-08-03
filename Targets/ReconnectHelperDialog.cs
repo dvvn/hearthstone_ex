@@ -5,7 +5,7 @@ using Dialog = global::ReconnectHelperDialog;
 namespace hearthstone_ex.Targets
 {
     [HarmonyPatch(typeof(Dialog))]
-    public class ReconnectHelperDialog : LoggerConsole.Static<ReconnectHelperDialog>
+    public class ReconnectHelperDialog : LoggerFile.Static<ReconnectHelperDialog>
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(ChangeState_FullResetRequired))]

@@ -11,7 +11,7 @@ namespace hearthstone_ex.Targets
         [HarmonyPrefix]
         [HarmonyArgument(0, "ent")]
         [HarmonyPatch(nameof(RegisterCard))]
-        public static void RegisterCard([CanBeNull] EntityDef ent, ref TAG_PREMIUM premium)
+        public static void RegisterCard(Manager __instance, [CanBeNull] EntityDef ent, ref TAG_PREMIUM premium)
         {
             //golden heroes on decks
 
@@ -22,7 +22,7 @@ namespace hearthstone_ex.Targets
             if (!ent.IsHero() && !ent.IsHeroPower())
                 return;
 
-            premium = ent.GetIdealPremiumTag();
+            premium = CardInfo.GetBestPossiblePremiumType(ent.GetCardId());
         }
     }
 

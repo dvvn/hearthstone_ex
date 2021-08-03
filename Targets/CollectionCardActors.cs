@@ -16,16 +16,16 @@ namespace hearthstone_ex.Targets
         {
             if (actor.GetPremium() != TAG_PREMIUM.NORMAL)
                 return;
-            var ent = actor.GetEntityDef();
+            var ent = actor.GetEntity();
             // ReSharper disable once UseNullPropagationWhenPossible
             if (ent == null)
                 return;
             if (!ent.IsHero() && !ent.IsHeroPower())
                 return;
-            if (!ent.HavePremiumTag(TAG_PREMIUM.GOLDEN))
+            if (!CardInfo.HavePremiumType(ent.GetCardId(),TAG_PREMIUM.GOLDEN))
                 return;
 
-            actor.SetPremium(ent.GetIdealPremiumTag());
+            actor.SetPremium(ent.GetBestPossiblePremiumType());
         }
     }
 }
