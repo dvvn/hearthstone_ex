@@ -231,6 +231,12 @@ namespace hearthstone_ex.Utils
             return GetKnownPremiumTags(card_id).FirstOrDefault();
         }
 
+
+        public static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this EntityDef ent)
+        {
+            return GetBestPossiblePremiumType(ent.GetCardId());
+        }
+
         public static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this Entity ent)
         {
             var tag = GetBestPossiblePremiumType(ent.GetCardId());

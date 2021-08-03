@@ -22,9 +22,9 @@ namespace hearthstone_ex.Targets
             {
                 if (actor != null)
                 {
-                    var ent_def = actor.GetEntityDef();
-                    if (ent_def != null)
-                        return ent_def.ToString();
+                    var ent = actor.GetEntityDef();
+                    if (ent != null)
+                        return ent.ToString();
                 }
 
                 return "UNKNOWN ENTITY";
@@ -134,7 +134,7 @@ namespace hearthstone_ex.Targets
                 return true;
             }
 
-            if (!CardInfo.HavePremiumType(deck_tile_actor.GetEntity().GetCardId(), TAG_PREMIUM.GOLDEN))
+            if (!CardInfo.HavePremiumType(deck_tile_actor.GetEntityDef().GetCardId(), TAG_PREMIUM.GOLDEN))
             {
                 LogMessage(deck_tile_actor, $"Material forced to {NORMAL_TAG}, because no others available!", info_full);
                 return true;
@@ -145,7 +145,7 @@ namespace hearthstone_ex.Targets
 
         private static TAG_PREMIUM GetPremiumMaterial(bool in_arena, bool is_ghosted,
                                                       [NotNull] CollectionDeckSlot deck_slot, [NotNull] CollectionDeckTileActor deck_tile_actor,
-                                                      CallerInfo info_full)
+                                                      CallerInfo info)
         {
             //copy every slot for future modify
             //because we must have the same slot on card with 2+ copies
@@ -155,29 +155,29 @@ namespace hearthstone_ex.Targets
             {
                 //dont touch ghosted cards
                 deck_tile_actor.SetSlot(deck_slot);
-                LogMessage(deck_tile_actor, $"Using default {DEFAULT_TAG} material while card is ghosted", info_full);
+                LogMessage(deck_tile_actor, $"Using default {DEFAULT_TAG} material while card is ghosted", info);
                 return DEFAULT_TAG;
             }
 
             var NORMAL_TAG = deck_slot.UnPreferredPremium;
-            if (ForceNonPremiumMaterial(NORMAL_TAG, in_arena, deck_tile_actor, info_full))
+            if (ForceNonPremiumMaterial(NORMAL_TAG, in_arena, deck_tile_actor, info))
             {
                 var other_tags = EnumsChecker<TAG_PREMIUM>.Get().OtherEnums(NORMAL_TAG);
                 deck_tile_actor.SetSlot(CopySlot(deck_slot, NORMAL_TAG, other_tags));
                 return NORMAL_TAG;
             }
 
-            var IDEAL_TAG = deck_tile_actor.GetEntity().GetBestPossiblePremiumType();
+            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType();
             if (DEFAULT_TAG != NORMAL_TAG && DEFAULT_TAG != IDEAL_TAG)
             {
                 //add only non-CUSTOM_TAG's here
                 deck_tile_actor.SetSlot(CopySlot(deck_slot));
-                LogMessage(deck_tile_actor, $"Using default {DEFAULT_TAG} material", info_full);
+                LogMessage(deck_tile_actor, $"Using default {DEFAULT_TAG} material", info);
                 return DEFAULT_TAG;
             }
 
             deck_tile_actor.SetSlot(CopySlot(deck_slot, IDEAL_TAG, NORMAL_TAG));
-            LogMessage(deck_tile_actor, $"Using custom slot with {IDEAL_TAG} tag. Default tag is {DEFAULT_TAG}", info_full);
+            LogMessage(deck_tile_actor, $"Using custom slot with {IDEAL_TAG} tag. Default tag is {DEFAULT_TAG}", info);
             return IDEAL_TAG;
         }
     }
