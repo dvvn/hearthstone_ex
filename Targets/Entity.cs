@@ -75,7 +75,6 @@ namespace hearthstone_ex.Targets
             if (tag_premium == TAG_PREMIUM.NORMAL)
             {
                 Logger.Message($"{__instance} have no golden material", info);
-                Logger.Message($"{__instance.GetCardId()} -> {string.Join(", ", CardInfo.GetKnownPremiumTags(__instance.GetCardId()))}", info);
                 return null;
             }
 
@@ -85,10 +84,10 @@ namespace hearthstone_ex.Targets
             return tag_premium;
         }
 
-        private static void SetHistoryGoldenTag([NotNull] Ent __instance, Net.Entity entity, int? premium_before, [NotNull] CallerInfo info)
+        private static TAG_PREMIUM? SetHistoryGoldenTag([NotNull] Ent __instance, Net.Entity entity, TAG_PREMIUM? premium_before, [NotNull] CallerInfo info)
         {
             if (UseRealGoldenTag())
-                return;
+                return null;
 
             const int GAME_TAG_PREMIUM = (int)GAME_TAG.PREMIUM;
 
@@ -110,30 +109,33 @@ namespace hearthstone_ex.Targets
                     if (!HistoryManager.m_lastPlayedEntity.IsSpell())
                     {
                         Logger.Message($"Wrong target");
-                        return;
+                        return null;
                     }
                     //it probably evolved
                 }
                 else if (HistoryManager.m_lastTargetedEntity != __instance)
                 {
                     Logger.Message($"Wrong target {HistoryManager.m_lastTargetedEntity}");
-                    return;
+                    return null;
                 }
 
-                premium_before = HistoryManager.m_lastPlayedEntity.GetTag(GAME_TAG_PREMIUM);
+                premium_before = (TAG_PREMIUM)HistoryManager.m_lastPlayedEntity.GetTag(GAME_TAG_PREMIUM);
             }
 
             var change_tags = entity.Tags;
             foreach (var tag in change_tags.Where(tag => tag.Name == GAME_TAG_PREMIUM))
             {
                 //fix premium tag changed before
-                Logger.Message($"Tag found. {(TAG_PREMIUM)tag.Value} -> {(TAG_PREMIUM)premium_before.Value}", info);
-                tag.Value = premium_before.Value;
-                return;
+                Logger.Message($"Tag found. {(TAG_PREMIUM)tag.Value} -> {premium_before.Value}", info);
+                tag.Value = (int)premium_before.Value;
+                goto _END;
             }
 
-            Logger.Message($"Tag added. {(TAG_PREMIUM)premium_before.Value}", info);
-            change_tags.Add(new Net.Entity.Tag { Name = GAME_TAG_PREMIUM, Value = premium_before.Value });
+            Logger.Message($"Tag added. {premium_before.Value}", info);
+            change_tags.Add(new Net.Entity.Tag { Name = GAME_TAG_PREMIUM, Value = (int)premium_before.Value });
+
+        _END:
+            return premium_before;
         }
     }
 
@@ -163,33 +165,30 @@ namespace hearthstone_ex.Targets
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Ent.OnChangeEntity))]
-        public static void OnChangeEntity( /*ref bool __state,*/ [NotNull] Ent __instance, [NotNull] List<Net.HistChangeEntity> ___m_transformPowersProcessed
-                                                               , Net.HistChangeEntity changeEntity)
+        public static void OnChangeEntity(ref TAG_PREMIUM? __state, [NotNull] Ent __instance,
+                                          [NotNull] List<Net.HistChangeEntity> ___m_transformPowersProcessed, Net.HistChangeEntity changeEntity)
         {
             if (___m_transformPowersProcessed.Contains(changeEntity))
             {
-                //__state = false;
+                __state = null;
             }
             else
             {
-                int? tag = null;
+                TAG_PREMIUM? tag = null;
                 if (__instance.GetZone() == TAG_ZONE.HAND)
                 {
-                    var ideal_tag = SetGoldenTag(__instance, new CallerInfoMin());
-                    if (ideal_tag.HasValue)
-                        tag = (int)ideal_tag.Value;
+                    tag = __instance.GetBestPossiblePremiumType();
                 }
 
-                /* __state =*/
-                SetHistoryGoldenTag(__instance, changeEntity.Entity, tag, new CallerInfoMin());
+                __state = SetHistoryGoldenTag(__instance, changeEntity.Entity, tag, new CallerInfoMin());
             }
         }
 
         /*[HarmonyPostfix]
         [HarmonyPatch(nameof(Ent.OnChangeEntity))]
-        public static void OnChangeEntity(ref bool __state, [NotNull] Ent __instance)
+        public static void OnChangeEntity(ref TAG_PREMIUM? __state, [NotNull] Ent __instance)
         {
-            if (!__state)
+            if (!__state.HasValue)
                 return;
 
             //testing

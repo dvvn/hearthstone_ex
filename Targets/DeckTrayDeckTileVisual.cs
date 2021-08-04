@@ -126,17 +126,17 @@ namespace hearthstone_ex.Targets
     //core funtions
     public partial class DeckTrayDeckTileVisual
     {
-        private static bool ForceNonPremiumMaterial(TAG_PREMIUM NORMAL_TAG, bool in_arena, Actor deck_tile_actor, CallerInfo info_full)
+        private static bool ForceNonPremiumMaterial(TAG_PREMIUM normal_tag, TAG_PREMIUM ideal_tag, bool in_arena, Actor deck_tile_actor, CallerInfo info_full)
         {
             if (in_arena && Options.Get().GetBool(Option.HAS_DISABLED_PREMIUMS_THIS_DRAFT))
             {
-                LogMessage(deck_tile_actor, $"Material forced to {NORMAL_TAG}!", info_full);
+                LogMessage(deck_tile_actor, $"Material forced to {normal_tag}!", info_full);
                 return true;
             }
 
-            if (!CardInfo.HavePremiumType(deck_tile_actor.GetEntityDef().GetCardId(), TAG_PREMIUM.GOLDEN))
+            if (ideal_tag <= normal_tag)
             {
-                LogMessage(deck_tile_actor, $"Material forced to {NORMAL_TAG}, because no others available!", info_full);
+                LogMessage(deck_tile_actor, $"Material forced to {normal_tag}, because no others available!", info_full);
                 return true;
             }
 
@@ -159,15 +159,15 @@ namespace hearthstone_ex.Targets
                 return DEFAULT_TAG;
             }
 
+            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType();
             var NORMAL_TAG = deck_slot.UnPreferredPremium;
-            if (ForceNonPremiumMaterial(NORMAL_TAG, in_arena, deck_tile_actor, info))
+            if (ForceNonPremiumMaterial(NORMAL_TAG,IDEAL_TAG, in_arena, deck_tile_actor, info))
             {
                 var other_tags = EnumsChecker<TAG_PREMIUM>.Get().OtherEnums(NORMAL_TAG);
                 deck_tile_actor.SetSlot(CopySlot(deck_slot, NORMAL_TAG, other_tags));
                 return NORMAL_TAG;
             }
 
-            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType();
             if (DEFAULT_TAG != NORMAL_TAG && DEFAULT_TAG != IDEAL_TAG)
             {
                 //add only non-CUSTOM_TAG's here
