@@ -104,13 +104,21 @@ namespace hearthstone_ex.Targets
             return JoinTags(ent.Tags.Select(t => new KeyValuePair<int, int>(t.Name, t.Value)));
         }
 
+        [CanBeNull]
+        private static EntityDef GetEntityDef(string card_id)
+        {
+            return DefLoader.Get().GetAllEntityDefs().Select(p => p.Value).FirstOrDefault(e => e.GetCardId() == card_id);
+        }
+
         private static void SetHistoryGoldenTag([NotNull] Ent from, [NotNull] Net.Entity to, [NotNull] CallerInfo info)
         {
             if (UseRealGoldenTag())
                 return;
 
             var from_entdef = from.GetEntityDef();
-            var to_entdef = DefLoader.Get().GetAllEntityDefs().Select(p => p.Value).First(e => e.GetCardId() == to.CardID);
+            var to_entdef = GetEntityDef(to.CardID);
+            if (to_entdef == null)
+                throw new NullReferenceException($"{nameof(to_entdef)} is null!");
 
             const int GAME_TAG_PREMIUM = (int)GAME_TAG.PREMIUM;
 
@@ -139,7 +147,7 @@ namespace hearthstone_ex.Targets
                 return builder.ToString();
             }
 
-            TAG_PREMIUM ideal_tag;
+            TAG_PREMIUM? ideal_tag = null;
             if (from.GetZone() == TAG_ZONE.HAND)
             {
                 bool from_HasTag(GAME_TAG tag) => from.HasTag(tag) || from_entdef.HasTag(tag);
@@ -150,12 +158,34 @@ namespace hearthstone_ex.Targets
                     ideal_tag = to_HasTag(GAME_TAG.HAS_DIAMOND_QUALITY) ? TAG_PREMIUM.DIAMOND : TAG_PREMIUM.GOLDEN;
                     Logger.Message($"Tag set to {ideal_tag}. Target card is {GAME_TAG.COLLECTIBLE}\n{Print_from_to()}", info);
                 }
-                else if (from_HasTag(GAME_TAG.COLLECTIBLE) && to.CardID.StartsWith(from.GetCardId(), StringComparison.Ordinal))
+                else if (to.CardID.StartsWith(from.GetCardId(), StringComparison.Ordinal))
                 {
-                    ideal_tag = from.GetBestPossiblePremiumType();
-                    Logger.Message($"Tag set to {ideal_tag}. Target card is child\n{Print_from_to()}", info);
+                    if (from_HasTag(GAME_TAG.COLLECTIBLE))
+                    {
+                        ideal_tag = from.GetBestPossiblePremiumType();
+                        Logger.Message($"Tag set to {ideal_tag}. Target card is child\n{Print_from_to()}", info);
+                    }
+                    else
+                    {
+                        var from_card_id = from.GetCardId();
+                        var remove = from_card_id.Reverse().TakeWhile(c => !char.IsDigit(c)).Count();
+
+                        if (remove > 0)
+                        {
+                            var root_card_id = from_card_id.Substring(0, from_card_id.Length - remove);
+                            var root_from_entdef = GetEntityDef(root_card_id);
+                            if (root_from_entdef?.HasTag(GAME_TAG.COLLECTIBLE) == true)
+                            {
+                                //WARNING!
+                                from_entdef = root_from_entdef;
+                                ideal_tag = root_from_entdef.GetBestPossiblePremiumType();
+                                Logger.Message($"Tag set to {ideal_tag}. Target card is multilevel child\n{Print_from_to()}", info);
+                            }
+                        }
+                    }
                 }
-                else
+
+                if (!ideal_tag.HasValue)
                 {
                     Logger.Message($"Unknown premium type\n{Print_from_to(true)}", info);
                     return;
