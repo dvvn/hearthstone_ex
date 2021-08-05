@@ -132,10 +132,8 @@ namespace hearthstone_ex.Targets
 
                         if (root_entdef != default)
                         {
-                            //WARNING!
-                            from_entdef = root_entdef;
                             ideal_tag = root_entdef.GetBestPossiblePremiumType(true);
-                            Logger.Message($"Tag set to {ideal_tag}. Target card is multi-level child\n{_PrintFromTo()}", info);
+                            Logger.Message($"Tag set to {ideal_tag}. Target card is multi-level child\n{_PrintFromTo(root_entdef)}", info);
                         }
 
                         /*var from_card_id = from.GetCardId();
