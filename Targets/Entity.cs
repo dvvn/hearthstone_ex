@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
@@ -7,45 +8,11 @@ using hearthstone_ex.Utils;
 using Ent = Entity;
 using Net = Network;
 using Gs = GameState;
-using Mgr = CollectionManager;
 
 namespace hearthstone_ex.Targets
 {
     [HarmonyPatch(typeof(Ent))]
     public partial class Entity : LoggerGui.Static<Entity>
-    {
-#if false
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ent.GetPremiumType))]
-        public static void GetPremiumType(ref TAG_PREMIUM __result, Ent __instance)
-        {
-            //golden heroes & cards in game
-
-            if (__result != TAG_PREMIUM.NORMAL)
-                return;
-            if (SpectatorManager.Get().IsSpectatingOrWatching)
-                return;
-            if (GameMgr.Get().IsBattlegrounds())
-                return;
-            //if (__instance.HasQueuedChangeEntity())
-            //    return;
-            if (__instance.GetControllerId() != Gs.Get().GetFriendlySidePlayer().GetPlayerId())
-                return;
-            if (__instance.GetCard().GetGoldenMaterial() == null) //all golden
-                return;
-            //if (!HavePremiumTag(__instance.GetEntityDef(), CUSTOM_PREMIUM_TAG))//all golden except coin
-            //    return;
-
-            __result = __instance.GetEntityDef().GetIdealPremiumTag();
-            __instance.SetTag(GAME_TAG.PREMIUM, __result);
-        }
-
-    }
-
-#endif
-    }
-
-    public partial class Entity
     {
         private static bool UseRealGoldenTag()
         {
@@ -61,26 +28,18 @@ namespace hearthstone_ex.Targets
             }
 
             var original_premium = ent.GetPremiumType();
-            if ((original_premium) != TAG_PREMIUM.NORMAL)
+            if (original_premium != TAG_PREMIUM.NORMAL)
                 return;
 
-            /*if (__instance.GetCard().GetGoldenMaterial() == null) //all golden
-            {
-                Logger.Message($"{__instance} have no golden material", info);
-                return null;
-            }*/
-            //if (!HavePremiumTag(__instance.GetEntityDef(), CUSTOM_PREMIUM_TAG))//all golden except coin
-            //    return;
-
-            var tag_premium = ent.GetBestPossiblePremiumType();
-            if (tag_premium == TAG_PREMIUM.NORMAL)
+            var tag = ent.GetBestPossiblePremiumType();
+            if (tag == TAG_PREMIUM.NORMAL)
             {
                 Logger.Message($"{ent} have no golden material", info);
                 return;
             }
 
-            ent.SetTag(GAME_TAG.PREMIUM, tag_premium);
-            Logger.Message($"{ent} set to {tag_premium}", info);
+            ent.SetTag(GAME_TAG.PREMIUM, tag);
+            Logger.Message($"{ent} set to {tag}", info);
         }
 
         [NotNull]
@@ -104,44 +63,42 @@ namespace hearthstone_ex.Targets
             return JoinTags(ent.Tags.Select(t => new KeyValuePair<int, int>(t.Name, t.Value)));
         }
 
-        [CanBeNull]
-        private static EntityDef GetEntityDef(string card_id)
+        [NotNull]
+        private static IEnumerable<EntityDef> GetAllEntityDefs()
         {
-            return DefLoader.Get().GetAllEntityDefs().Select(p => p.Value).FirstOrDefault(e => e.GetCardId() == card_id);
+            return DefLoader.Get().GetAllEntityDefs().Select(p => p.Value);
         }
 
         private static void SetHistoryGoldenTag([NotNull] Ent from, [NotNull] Net.Entity to, [NotNull] CallerInfo info)
         {
-            if (UseRealGoldenTag())
-                return;
+            if (UseRealGoldenTag()) return;
 
             var from_entdef = from.GetEntityDef();
-            var to_entdef = GetEntityDef(to.CardID);
-            if (to_entdef == null)
-                throw new NullReferenceException($"{nameof(to_entdef)} is null!");
+            var to_entdef = GetAllEntityDefs().First(e => e.GetCardId() == to.CardID);
 
             const int GAME_TAG_PREMIUM = (int)GAME_TAG.PREMIUM;
 
-            string Print_from_to(bool detailed = false)
+            string _PrintFromTo(EntityDef root_from_entdef = null, bool detailed = false)
             {
-                var builder = new System.Text.StringBuilder();
+                var builder = new StringBuilder();
+                var from_entdef_overriden = root_from_entdef ?? from_entdef;
 
                 if (detailed)
                 {
-                    builder.AppendLine(from.ToString());
-                    builder.AppendLine(JoinTags(from));
-                    builder.AppendLine(from_entdef.ToString());
-                    builder.AppendLine(JoinTags(from_entdef));
-                    builder.AppendLine("---");
-                    builder.AppendLine($"[{to}]");
-                    builder.AppendLine(JoinTags(to));
-                    builder.AppendLine(to_entdef.ToString());
-                    builder.Append(JoinTags(to_entdef));
+                    builder.AppendLine(from.ToString())
+                           .AppendLine(JoinTags(from))
+                           .AppendLine(from_entdef_overriden.ToString())
+                           .AppendLine(JoinTags(from_entdef_overriden))
+                           .AppendLine("---")
+                           .AppendLine($"[{to}]")
+                           .AppendLine(JoinTags(to))
+                           .AppendLine(to_entdef.ToString())
+                           .Append(JoinTags(to_entdef));
                 }
                 else
                 {
-                    builder.AppendLine($"{from} {from_entdef}");
-                    builder.Append($"[{to}] {to_entdef}");
+                    builder.AppendLine($"{from} {from_entdef_overriden}")
+                           .Append($"[{to}] {to_entdef}");
                 }
 
                 return builder.ToString();
@@ -150,24 +107,38 @@ namespace hearthstone_ex.Targets
             TAG_PREMIUM? ideal_tag = null;
             if (from.GetZone() == TAG_ZONE.HAND)
             {
+                // ReSharper disable InconsistentNaming
                 bool from_HasTag(GAME_TAG tag) => from.HasTag(tag) || from_entdef.HasTag(tag);
                 bool to_HasTag(GAME_TAG tag) => to.Tags.Any(t => t.Name == (int)tag && t.Value > 0) || to_entdef.HasTag(tag);
+                // ReSharper restore InconsistentNaming
 
                 if (to_HasTag(GAME_TAG.COLLECTIBLE))
                 {
                     ideal_tag = to_HasTag(GAME_TAG.HAS_DIAMOND_QUALITY) ? TAG_PREMIUM.DIAMOND : TAG_PREMIUM.GOLDEN;
-                    Logger.Message($"Tag set to {ideal_tag}. Target card is {GAME_TAG.COLLECTIBLE}\n{Print_from_to()}", info);
+                    Logger.Message($"Tag set to {ideal_tag}. Target card is {GAME_TAG.COLLECTIBLE}\n{_PrintFromTo()}", info);
                 }
                 else if (to.CardID.StartsWith(from.GetCardId(), StringComparison.Ordinal))
                 {
                     if (from_HasTag(GAME_TAG.COLLECTIBLE))
                     {
                         ideal_tag = from.GetBestPossiblePremiumType();
-                        Logger.Message($"Tag set to {ideal_tag}. Target card is child\n{Print_from_to()}", info);
+                        Logger.Message($"Tag set to {ideal_tag}. Target card is child\n{_PrintFromTo()}", info);
                     }
                     else
                     {
-                        var from_card_id = from.GetCardId();
+                        var root_entdef = GetAllEntityDefs()
+                                         .Where(e => e.HasTag(GAME_TAG.COLLECTIBLE))
+                                         .FirstOrDefault(e => to.CardID.StartsWith(e.GetCardId(), StringComparison.Ordinal));
+
+                        if (root_entdef != default)
+                        {
+                            //WARNING!
+                            from_entdef = root_entdef;
+                            ideal_tag = root_entdef.GetBestPossiblePremiumType(true);
+                            Logger.Message($"Tag set to {ideal_tag}. Target card is multi-level child\n{_PrintFromTo()}", info);
+                        }
+
+                        /*var from_card_id = from.GetCardId();
                         var remove = from_card_id.Reverse().TakeWhile(c => !char.IsDigit(c)).Count();
 
                         if (remove > 0)
@@ -181,13 +152,13 @@ namespace hearthstone_ex.Targets
                                 ideal_tag = root_from_entdef.GetBestPossiblePremiumType();
                                 Logger.Message($"Tag set to {ideal_tag}. Target card is multilevel child\n{Print_from_to()}", info);
                             }
-                        }
+                        }*/
                     }
                 }
 
                 if (!ideal_tag.HasValue)
                 {
-                    Logger.Message($"Unknown premium type\n{Print_from_to(true)}", info);
+                    Logger.Message($"Unknown premium type\n{_PrintFromTo(detailed: true)}", info);
                     return;
                 }
             }
@@ -208,14 +179,14 @@ namespace hearthstone_ex.Targets
                 {
                     if (!HistoryManager.m_lastPlayedEntity.IsSpell())
                     {
-                        Logger.Message($"Target not found\n{Print_from_to(true)}", info);
+                        Logger.Message($"Target not found\n{_PrintFromTo(detailed: true)}", info);
                         return;
                     }
                     //it probably evolved
                 }
                 else if (HistoryManager.m_lastTargetedEntity != from)
                 {
-                    Logger.Message($"Wrong target\n{HistoryManager.m_lastTargetedEntity} !-> {HistoryManager.m_lastTargetedEntity}\n{Print_from_to(true)}", info);
+                    Logger.Message($"Wrong target\n{HistoryManager.m_lastTargetedEntity} !-> {HistoryManager.m_lastTargetedEntity}\n{_PrintFromTo(detailed: true)}", info);
                     return;
                 }
 
@@ -226,7 +197,7 @@ namespace hearthstone_ex.Targets
             var change_tags = to.Tags;
             foreach (var tag in change_tags.Where(tag => tag.Name == GAME_TAG_PREMIUM))
             {
-                //fix premium tag changed before
+                //force premium tag changed before
                 Logger.Message($"Tag found. {(TAG_PREMIUM)tag.Value} -> {ideal_tag}", info);
                 tag.Value = (int)ideal_tag;
                 return;
@@ -243,8 +214,7 @@ namespace hearthstone_ex.Targets
         [HarmonyPatch(nameof(Ent.OnFullEntity))]
         public static void OnFullEntity([NotNull] Ent __instance)
         {
-            if (UseRealGoldenTag())
-                return;
+            if (UseRealGoldenTag()) return;
 
             //golden cards while game starts
             SetGoldenTag(__instance, new CallerInfoMin());
@@ -254,8 +224,7 @@ namespace hearthstone_ex.Targets
         [HarmonyPatch(nameof(Ent.OnShowEntity))]
         public static void OnShowEntity([NotNull] Ent __instance)
         {
-            if (UseRealGoldenTag())
-                return;
+            if (UseRealGoldenTag()) return;
 
             //golden card when it taken from the deck, played by enemy, etc...
             SetGoldenTag(__instance, new CallerInfoMin());
@@ -265,8 +234,7 @@ namespace hearthstone_ex.Targets
         [HarmonyPatch(nameof(Ent.OnChangeEntity))]
         public static void OnChangeEntity([NotNull] Ent __instance, [NotNull] List<Net.HistChangeEntity> ___m_transformPowersProcessed, Net.HistChangeEntity changeEntity)
         {
-            if (___m_transformPowersProcessed.Contains(changeEntity))
-                return;
+            if (___m_transformPowersProcessed.Contains(changeEntity)) return;
 
             SetHistoryGoldenTag(__instance, changeEntity.Entity, new CallerInfoMin());
         }
@@ -280,20 +248,19 @@ namespace hearthstone_ex.Targets
         {
             //remove shit from logs
 
-            CardTextBuilder GetResult()
+            CardTextBuilder _GetResult()
             {
                 var end_def = __instance.GetEntityDef();
                 if (end_def != null)
                 {
                     var builder = end_def.GetCardTextBuilder();
-                    if (builder != null)
-                        return builder;
+                    if (builder != null) return builder;
                 }
 
                 return CardTextBuilder.GetFallbackCardTextBuilder();
             }
 
-            __result = GetResult();
+            __result = _GetResult();
             return false;
         }
     }

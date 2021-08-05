@@ -78,12 +78,11 @@ namespace hearthstone_ex.Utils
         protected LoggerBase([NotNull] Type type, [NotNull] string root_prefix = "HS_EX", bool full_type_name = false,
                              [NotNull] params object[] extra)
         {
-
             var buffer = new StringBuilder();
 
             buffer.AppendBrackets(root_prefix);
             var type_name = full_type_name ? type.FullName : type.Name;
-            buffer.AppendBrackets( (type_name));
+            buffer.AppendBrackets((type_name));
             foreach (var str in extra)
             {
                 buffer.Append(m_space);
