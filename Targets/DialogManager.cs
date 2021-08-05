@@ -11,8 +11,8 @@ namespace hearthstone_ex.Targets
     [HarmonyPatch(typeof(Manager))]
     public class DialogManager : LoggerGui.Static<DialogManager>
     {
-        private static readonly string[] m_Headers = {"GLUE_COLLECTION_DELETE_CONFIRM_HEADER", "GLUE_CRAFTING_DISENCHANT_CONFIRM_HEADER"};
-        private static string[] m_LocalizedHeaders;
+        private static readonly string[] m_headers = { "GLUE_COLLECTION_DELETE_CONFIRM_HEADER", "GLUE_CRAFTING_DISENCHANT_CONFIRM_HEADER" };
+        private static string[] m_localizedHeaders;
         private static Locale m_gameLocale = Locale.UNKNOWN;
 
         //private static readonly Dictionary<Locale, string[]> m_LocalizedHeaders = new Dictionary<Locale, string[]>(1);
@@ -21,11 +21,11 @@ namespace hearthstone_ex.Targets
             var locale = Localization.GetLocale();
             if (m_gameLocale != locale)
             {
-                m_LocalizedHeaders = m_Headers.Select(GameStrings.Get).ToArray();
+                m_localizedHeaders = m_headers.Select(GameStrings.Get).ToArray();
                 m_gameLocale = locale;
             }
 
-            return m_LocalizedHeaders.Any(text.Equals);
+            return m_localizedHeaders.Any(text.Equals);
         }
 
         [HarmonyPrefix]

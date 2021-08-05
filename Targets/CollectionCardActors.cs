@@ -6,7 +6,7 @@ using Actors = CollectionCardActors;
 namespace hearthstone_ex.Targets
 {
     [HarmonyPatch(typeof(Actors))]
-    public class CollectionCardActors
+    public class CollectionCardActors : LoggerGui.Static<Actors>
     {
         //golden hero skins in collection, on arena end other places
 
@@ -21,7 +21,7 @@ namespace hearthstone_ex.Targets
                 return;
             if (!ent.IsHero() && !ent.IsHeroPower())
                 return;
-            actor.SetPremium(ent.GetBestPossiblePremiumType());
+            actor.SetPremium(ent.GetBestPossiblePremiumType(msg => Logger.Message(msg, nameof(CollectionCardActors))));
         }
     }
 }

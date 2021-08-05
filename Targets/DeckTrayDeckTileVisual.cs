@@ -12,6 +12,8 @@ using Tray = DeckTrayDeckTileVisual;
 
 namespace hearthstone_ex.Targets
 {
+    using System.Diagnostics.CodeAnalysis;
+
     //logging
     public partial class DeckTrayDeckTileVisual : LoggerGui.Static<DeckTrayDeckTileVisual>
     {
@@ -159,9 +161,9 @@ namespace hearthstone_ex.Targets
                 return DEFAULT_TAG;
             }
 
-            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType();
+            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType(msg => Logger.Message(msg,info));
             var NORMAL_TAG = deck_slot.UnPreferredPremium;
-            if (ForceNonPremiumMaterial(NORMAL_TAG,IDEAL_TAG, in_arena, deck_tile_actor, info))
+            if (ForceNonPremiumMaterial(NORMAL_TAG, IDEAL_TAG, in_arena, deck_tile_actor, info))
             {
                 var other_tags = EnumsChecker<TAG_PREMIUM>.Get().OtherEnums(NORMAL_TAG);
                 deck_tile_actor.SetSlot(CopySlot(deck_slot, NORMAL_TAG, other_tags));
@@ -210,18 +212,19 @@ namespace hearthstone_ex.Targets
             var card_is_unique = entity_def.IsElite() && (!___m_inArena || ___m_slot.Count <= 1);
             ___m_actor.UpdateDeckCardProperties(card_is_unique, false, ___m_slot.Count, ___m_useSliderAnimations);
 
-            DefLoader.Get().LoadCardDef(entity_def.GetCardId(), (cardID, cardDef, data) =>
-            {
-                using (cardDef)
-                {
-                    if (!cardID.Equals(___m_actor.GetEntityDef().GetCardId()))
-                        return;
-                    ___m_actor.SetCardDef(cardDef);
-                    ___m_actor.UpdateAllComponents();
-                    ___m_actor.UpdateMaterial(cardDef.CardDef.GetDeckCardBarPortrait());
-                    ___m_actor.UpdateGhostTileEffect();
-                }
-            }, quality: new CardPortraitQuality(1, premium_tag));
+            DefLoader.Get()
+                     .LoadCardDef(entity_def.GetCardId(), (cardID, cardDef, data) =>
+                                                          {
+                                                              using (cardDef)
+                                                              {
+                                                                  if (!cardID.Equals(___m_actor.GetEntityDef().GetCardId()))
+                                                                      return;
+                                                                  ___m_actor.SetCardDef(cardDef);
+                                                                  ___m_actor.UpdateAllComponents();
+                                                                  ___m_actor.UpdateMaterial(cardDef.CardDef.GetDeckCardBarPortrait());
+                                                                  ___m_actor.UpdateGhostTileEffect();
+                                                              }
+                                                          }, quality: new CardPortraitQuality(1, premium_tag));
 
             return false;
         }

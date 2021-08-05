@@ -64,7 +64,9 @@ namespace hearthstone_ex.Utils
 
     public class CallerInfoMin : CallerInfo
     {
-        public CallerInfoMin([CallerMemberName] string member_name = "") : base(member_name, null, null) { }
+        public CallerInfoMin([CallerMemberName] string member_name = "") : base(member_name, null, null)
+        {
+        }
     }
 
     public abstract class LoggerBase
@@ -152,7 +154,9 @@ namespace hearthstone_ex.Utils
             public static readonly LoggerBase Logger = new LoggerFile(typeof(T));
         }
 
-        public LoggerFile([NotNull] Type type) : base(type) { }
+        public LoggerFile([NotNull] Type type) : base(type)
+        {
+        }
 
         protected override void ErrorImpl(object msg)
         {

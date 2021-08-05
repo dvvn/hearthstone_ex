@@ -73,135 +73,62 @@ namespace hearthstone_ex.Targets
         {
             if (UseRealGoldenTag()) return;
 
+            const int GAME_TAG_PREMIUM = (int)GAME_TAG.PREMIUM;
+
+            void _Logger(string msg) => Logger.Message(msg, info);
+
             var from_entdef = from.GetEntityDef();
             var to_entdef = GetAllEntityDefs().First(e => e.GetCardId() == to.CardID);
 
-            const int GAME_TAG_PREMIUM = (int)GAME_TAG.PREMIUM;
-
-            string _PrintFromTo(EntityDef root_from_entdef = null, bool detailed = false)
+            string _PrintFromTo(bool detailed = false)
             {
                 var builder = new StringBuilder();
-                var from_entdef_overriden = root_from_entdef ?? from_entdef;
 
+                builder.Append("From def: ");
+                builder.AppendLine(from_entdef.ToString());
                 if (detailed)
-                {
-                    builder.AppendLine(from.ToString())
-                           .AppendLine(JoinTags(from))
-                           .AppendLine(from_entdef_overriden.ToString())
-                           .AppendLine(JoinTags(from_entdef_overriden))
-                           .AppendLine("---")
-                           .AppendLine($"[{to}]")
-                           .AppendLine(JoinTags(to))
-                           .AppendLine(to_entdef.ToString())
-                           .Append(JoinTags(to_entdef));
-                }
-                else
-                {
-                    builder.AppendLine($"{from} {from_entdef_overriden}")
-                           .Append($"[{to}] {to_entdef}");
-                }
-
+                    builder.AppendLine(JoinTags(from_entdef));
+                builder.Append("From: ");
+                builder.AppendLine(from.ToString());
+                if (detailed)
+                    builder.AppendLine(JoinTags(from));
+                builder.Append("To def: ");
+                builder.AppendLine(to_entdef.ToString());
+                if (detailed)
+                    builder.AppendLine(JoinTags(to_entdef));
+                builder.AppendLine($"To: [{to}]");
+                if (detailed)
+                    builder.Append(JoinTags(to));
+                
                 return builder.ToString();
             }
 
-            TAG_PREMIUM? ideal_tag = null;
-            if (from.GetZone() == TAG_ZONE.HAND)
-            {
-                // ReSharper disable InconsistentNaming
-                bool from_HasTag(GAME_TAG tag) => from.HasTag(tag) || from_entdef.HasTag(tag);
-                bool to_HasTag(GAME_TAG tag) => to.Tags.Any(t => t.Name == (int)tag && t.Value > 0) || to_entdef.HasTag(tag);
-                // ReSharper restore InconsistentNaming
+            var tag_before = from.GetBestPossiblePremiumType(logger: _Logger);
+            var tag_after = to_entdef.GetBestPossiblePremiumType(logger: _Logger);
+            TAG_PREMIUM ideal_tag;
 
-                if (to_HasTag(GAME_TAG.COLLECTIBLE))
-                {
-                    ideal_tag = to_HasTag(GAME_TAG.HAS_DIAMOND_QUALITY) ? TAG_PREMIUM.DIAMOND : TAG_PREMIUM.GOLDEN;
-                    Logger.Message($"Tag set to {ideal_tag}. Target card is {GAME_TAG.COLLECTIBLE}\n{_PrintFromTo()}", info);
-                }
-                else if (to.CardID.StartsWith(from.GetCardId(), StringComparison.Ordinal))
-                {
-                    if (from_HasTag(GAME_TAG.COLLECTIBLE))
-                    {
-                        ideal_tag = from.GetBestPossiblePremiumType();
-                        Logger.Message($"Tag set to {ideal_tag}. Target card is child\n{_PrintFromTo()}", info);
-                    }
-                    else
-                    {
-                        var root_entdef = GetAllEntityDefs()
-                                         .Where(e => e.HasTag(GAME_TAG.COLLECTIBLE))
-                                         .FirstOrDefault(e => to.CardID.StartsWith(e.GetCardId(), StringComparison.Ordinal));
-
-                        if (root_entdef != default)
-                        {
-                            ideal_tag = root_entdef.GetBestPossiblePremiumType(true);
-                            Logger.Message($"Tag set to {ideal_tag}. Target card is multi-level child\n{_PrintFromTo(root_entdef)}", info);
-                        }
-
-                        /*var from_card_id = from.GetCardId();
-                        var remove = from_card_id.Reverse().TakeWhile(c => !char.IsDigit(c)).Count();
-
-                        if (remove > 0)
-                        {
-                            var root_card_id = from_card_id.Substring(0, from_card_id.Length - remove);
-                            var root_from_entdef = GetEntityDef(root_card_id);
-                            if (root_from_entdef?.HasTag(GAME_TAG.COLLECTIBLE) == true)
-                            {
-                                //WARNING!
-                                from_entdef = root_from_entdef;
-                                ideal_tag = root_from_entdef.GetBestPossiblePremiumType();
-                                Logger.Message($"Tag set to {ideal_tag}. Target card is multilevel child\n{Print_from_to()}", info);
-                            }
-                        }*/
-                    }
-                }
-
-                if (!ideal_tag.HasValue)
-                {
-                    Logger.Message($"Unknown premium type\n{_PrintFromTo(detailed: true)}", info);
-                    return;
-                }
-            }
+            if (tag_before < tag_after)
+                ideal_tag = tag_before;
             else
             {
-                /*
-                 how it works:
-    
-                fake golden hex (or similar) played
-                game send it to server
-                the server says that the card needs to be turned into a non-golden frog 
-                we found the card we play before and force new card be golden again
-                 */
-
-                Logger.Message($"Played: {HistoryManager.m_lastPlayedEntity}", info);
-
-                if (HistoryManager.m_lastTargetedEntity == null)
+                ideal_tag = (TAG_PREMIUM)Math.Min((int)tag_before, (int)tag_after);
+                if (ideal_tag == default)
                 {
-                    if (!HistoryManager.m_lastPlayedEntity.IsSpell())
-                    {
-                        Logger.Message($"Target not found\n{_PrintFromTo(detailed: true)}", info);
-                        return;
-                    }
-                    //it probably evolved
-                }
-                else if (HistoryManager.m_lastTargetedEntity != from)
-                {
-                    Logger.Message($"Wrong target\n{HistoryManager.m_lastTargetedEntity} !-> {HistoryManager.m_lastTargetedEntity}\n{_PrintFromTo(detailed: true)}", info);
+                    Logger.Message($"Unknown premium type\n{_PrintFromTo(true)}", info);
                     return;
                 }
-
-                ideal_tag = (TAG_PREMIUM)HistoryManager.m_lastPlayedEntity.GetTag(GAME_TAG_PREMIUM);
-                Logger.Message($"Tag {ideal_tag} taken from previously played card", info);
             }
 
             var change_tags = to.Tags;
             foreach (var tag in change_tags.Where(tag => tag.Name == GAME_TAG_PREMIUM))
             {
                 //force premium tag changed before
-                Logger.Message($"Tag found. {(TAG_PREMIUM)tag.Value} -> {ideal_tag}", info);
+                Logger.Message($"Tag found. {(TAG_PREMIUM)tag.Value} -> {ideal_tag}\n{_PrintFromTo()}", info);
                 tag.Value = (int)ideal_tag;
                 return;
             }
 
-            Logger.Message($"Tag added. {ideal_tag}", info);
+            Logger.Message($"Tag added. {ideal_tag}\n{_PrintFromTo()}", info);
             change_tags.Add(new Net.Entity.Tag { Name = GAME_TAG_PREMIUM, Value = (int)ideal_tag });
         }
     }

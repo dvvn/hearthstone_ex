@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
 using hearthstone_ex.Utils;
-using Dialog = global::ReconnectHelperDialog;
+using Dialog = ReconnectHelperDialog;
 
 namespace hearthstone_ex.Targets
 {
@@ -17,7 +17,7 @@ namespace hearthstone_ex.Targets
             if (mgr.UpdateRequired)
                 return true;
 
-            Logger.Message("the game wants to restart");
+            Logger.Message("The game wants to be restarted");
             mgr.FullResetRequired = false;
             //mgr.ReconnectToGameFromLogin();
             return false;

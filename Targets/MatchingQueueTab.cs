@@ -25,16 +25,19 @@ namespace hearthstone_ex.Targets
         }
 #endif
 
-        private static int last_frame_count;
+        private static int m_lastFrameCount;
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(InitTimeStringSet))]
         public static void InitTimeStringSet(ref float ___m_timeInQueue)
         {
+
+            //fix waiting timer while timescale is changed
+
             var count = Time.frameCount;
-            if (count != last_frame_count)
+            if (count != m_lastFrameCount)
             {
-                last_frame_count = count;
+                m_lastFrameCount = count;
 
                 ___m_timeInQueue -= Time.deltaTime;
                 ___m_timeInQueue += Time.unscaledDeltaTime;

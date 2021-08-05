@@ -22,7 +22,7 @@ namespace hearthstone_ex.Targets
             if (!ent.IsHero() && !ent.IsHeroPower())
                 return;
 
-            premium = ent.GetBestPossiblePremiumType();
+            premium = ent.GetBestPossiblePremiumType(msg => Logger.Message(msg, nameof(CollectionManager)));
         }
     }
 

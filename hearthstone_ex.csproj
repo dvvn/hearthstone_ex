@@ -57,8 +57,6 @@
     <Compile Include="Targets\EnemyEmoteHandler.cs" />
     <Compile Include="Targets\Entity.cs" />
     <Compile Include="Targets\ExceptionReporterControl.cs" />
-    <Compile Include="Targets\GameState.cs" />
-    <Compile Include="Targets\HistoryManager.cs" />
     <Compile Include="Targets\MatchingQueueTab.cs" />
     <Compile Include="Targets\Network.cs" />
     <Compile Include="Targets\ReconnectHelperDialog.cs" />
