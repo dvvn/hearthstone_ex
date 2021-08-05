@@ -80,26 +80,40 @@ namespace hearthstone_ex.Targets
             var from_entdef = from.GetEntityDef();
             var to_entdef = GetAllEntityDefs().First(e => e.GetCardId() == to.CardID);
 
-            string _PrintFromTo(bool detailed = false)
+            const int FROM_TO_DEFS = 1 << 0;
+            const int FROM_TO_FLAGS = 1 << 1;
+
+            string _PrintFromTo(int bflags = 0)
             {
                 var builder = new StringBuilder();
 
-                builder.Append("From def: ");
-                builder.AppendLine(from_entdef.ToString());
-                if (detailed)
-                    builder.AppendLine(JoinTags(from_entdef));
+                var defs = (bflags & FROM_TO_DEFS) > 0;
+                var flags = (bflags & FROM_TO_FLAGS) > 0;
+
+                if (defs)
+                {
+                    builder.Append("From def: ");
+                    builder.AppendLine(from_entdef.ToString());
+                    if (flags)
+                        builder.AppendLine(JoinTags(from_entdef));
+                }
+
                 builder.Append("From: ");
                 builder.AppendLine(from.ToString());
-                if (detailed)
+                if (flags)
                     builder.AppendLine(JoinTags(from));
-                builder.Append("To def: ");
-                builder.AppendLine(to_entdef.ToString());
-                if (detailed)
-                    builder.AppendLine(JoinTags(to_entdef));
+                if (defs)
+                {
+                    builder.Append("To def: ");
+                    builder.AppendLine(to_entdef.ToString());
+                    if (flags)
+                        builder.AppendLine(JoinTags(to_entdef));
+                }
+
                 builder.AppendLine($"To: [{to}]");
-                if (detailed)
+                if (flags)
                     builder.Append(JoinTags(to));
-                
+
                 return builder.ToString();
             }
 
@@ -114,7 +128,7 @@ namespace hearthstone_ex.Targets
                 ideal_tag = (TAG_PREMIUM)Math.Min((int)tag_before, (int)tag_after);
                 if (ideal_tag == default)
                 {
-                    Logger.Message($"Unknown premium type\n{_PrintFromTo(true)}", info);
+                    Logger.Message($"Unknown premium type\n{_PrintFromTo(FROM_TO_DEFS | FROM_TO_FLAGS)}", info);
                     return;
                 }
             }

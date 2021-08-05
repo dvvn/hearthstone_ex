@@ -53,7 +53,7 @@ namespace hearthstone_ex.Utils
             return ent.GetCard().HavePremiumTexture();
         }
 
-        private static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this EntityBase ent, bool have_premium_texture)
+        private static TAG_PREMIUM SelectBestPremiumType([NotNull] this EntityBase ent, bool have_premium_texture)
         {
             return have_premium_texture == false            ? TAG_PREMIUM.NORMAL :
                    ent.HasTag(GAME_TAG.HAS_DIAMOND_QUALITY) ? TAG_PREMIUM.DIAMOND : TAG_PREMIUM.GOLDEN;
@@ -61,12 +61,12 @@ namespace hearthstone_ex.Utils
 
         public static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this EntityBase ent, [CanBeNull] Action<string> logger = null)
         {
-            return ent.GetBestPossiblePremiumType(ent.HavePremiumTexture(logger));
+            return ent.SelectBestPremiumType(ent.HavePremiumTexture(logger));
         }
 
         public static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this Entity ent)
         {
-            return ent.GetEntityDef().GetBestPossiblePremiumType(ent.HavePremiumTexture());
+            return ent.GetEntityDef().SelectBestPremiumType(ent.HavePremiumTexture());
         }
     }
 }
