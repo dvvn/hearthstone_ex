@@ -149,38 +149,50 @@ namespace hearthstone_ex.Targets
                 return builder.ToString();
             }
 
-            //var tag_before = from.GetBestPossiblePremiumType(_Logger);
-            //var tag_after = to_entdef.GetBestPossiblePremiumType(_Logger);
+            // ReSharper disable once InlineOutVariableDeclaration
+            TAG_PREMIUM tag_before, tag_after;
 
-            if (!TryGetFakePremium(from, out var tag_before))
+            if (from.GetCardId() == HistoryManager.LastTargetedEntity?.GetCardId())
             {
-                if (from.GetCardId() != HistoryManager.LastTargetedEntity.GetCardId() || !TryGetFakePremium(HistoryManager.LastPlayedEntity, out tag_before))
-                {
-                    Logger.Message($"Last played: {HistoryManager.LastPlayedEntity}\n"
-                                 + $"Last target: {HistoryManager.LastTargetedEntity}\n"
-                                 + "Fake premium type not set before\n"
-                                 + $"{_PrintFromTo(FROM_TO_DEFS)}", info);
-                    return UPDATE_ACTOR.ORIGINAL;
-                }
+                if (!TryGetFakePremium(HistoryManager.LastPlayedEntity, out tag_before))
+                    tag_before = default;
+            }
+            else if (!TryGetFakePremium(from, out tag_before))
+            {
+                Logger.Message($"Last played: {HistoryManager.LastPlayedEntity}\n"
+                             + $"Last target: {HistoryManager.LastTargetedEntity}\n"
+                             + "Fake premium type not set before\n"
+                             + $"{_PrintFromTo(FROM_TO_DEFS)}", info);
+                return UPDATE_ACTOR.ORIGINAL;
             }
 
-            if (from.GetEntityId() == to.ID || !TryGetFakePremium(from, out var tag_after))
+            if (from.GetEntityId() == to.ID || !TryGetFakePremium(to.ID, out tag_after))
                 tag_after = to_entdef.GetBestPossiblePremiumType(_Logger);
 
             TAG_PREMIUM ideal_tag;
+            UPDATE_ACTOR result;
             if (tag_before < tag_after)
+            {
                 ideal_tag = tag_before;
+                result = UPDATE_ACTOR.NO;
+            }
+            else if (tag_before == tag_after)
+            {
+                if (tag_before == default)
+                {
+                    Logger.Message($"Premium type stay default\n{_PrintFromTo()}", info);
+                    return UPDATE_ACTOR.NO;
+                }
+
+                ideal_tag = tag_before;
+                result = UPDATE_ACTOR.NO;
+            }
             else
             {
-                ideal_tag = (TAG_PREMIUM)Math.Min((int)tag_before, (int)tag_after);
-                if (ideal_tag == default)
-                {
-                    Logger.Message($"Unknown premium type\n{_PrintFromTo(FROM_TO_DEFS | FROM_TO_FLAGS)}", info);
-                    return UPDATE_ACTOR.ORIGINAL;
-                }
+                //diamond -> golden use same (animated) actor
+                ideal_tag = tag_after;
+                result = tag_after == default ? UPDATE_ACTOR.YES : UPDATE_ACTOR.NO;
             }
-
-            var result = tag_before == tag_after ? UPDATE_ACTOR.NO : UPDATE_ACTOR.YES;
 
             foreach (var tag in to.Tags.Where(tag => tag.Name == GAME_TAG_PREMIUM))
             {
@@ -192,7 +204,7 @@ namespace hearthstone_ex.Targets
 
             Logger.Message($"Tag added. {ideal_tag}\n{_PrintFromTo(FROM_TO_FLAGS)}", info);
             to.Tags.Add(new Net.Entity.Tag { Name = GAME_TAG_PREMIUM, Value = (int)ideal_tag });
-            return /*UPDATE_ACTORS.YES*/result;
+            return result;
         }
     }
 
