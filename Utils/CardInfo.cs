@@ -1,41 +1,50 @@
 ﻿using JetBrains.Annotations;
 using PegasusShared;
 using UnityEngine;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace hearthstone_ex.Utils
 {
-    using System;
-
-    public static class CardInfo
+    internal static class CardInfo
     {
-        public static bool HavePremiumTexture(string card_id, [CanBeNull] Action<string> logger = null)
-        {
-            var assetRefFromCardId = HearthstoneServices.Get<IAliasedAssetResolver>().GetCardDefAssetRefFromCardId(card_id);
-            var cardPrefabInstance = AssetLoader.Get().GetOrInstantiateSharedPrefab(assetRefFromCardId);
+        private static readonly IDictionary<string, bool> m_premiumTexturesInfo = new ConcurrentDictionary<string, bool>();
 
-            if (cardPrefabInstance == default)
+        public static bool HavePremiumTexture([CanBeNull] string card_id, [CanBeNull] Action<string> logger = null)
+        {
+            if (string.IsNullOrEmpty(card_id))
+                return false;
+
+            if (m_premiumTexturesInfo.TryGetValue(card_id, out var result))
+                return result;
+
+            var asset = HearthstoneServices.Get<IAliasedAssetResolver>().GetCardDefAssetRefFromCardId(card_id);
+            var prefab = AssetLoader.Get().GetOrInstantiateSharedPrefab(asset);
+
+            if (prefab == default)
             {
                 logger?.Invoke("card prefab is null");
                 return false;
             }
 
-            var cardDef = cardPrefabInstance.Asset.GetComponent<CardDef>();
-
-            if (CardTextureLoader.PremiumAnimationAvailable(cardDef))
+            using (prefab)
             {
-                /*if (logger != default)
+                var card_def = prefab.Asset.GetComponent<CardDef>();
+                if (card_def == default)
                 {
-                    var material = cardDef.GetPremiumPortraitMaterial();
-                    logger.Invoke(material == default ? "texture is loading" : material.ToString());
-                }*/
+                    logger?.Invoke("card def is null");
+                    return false;
+                }
 
-                return true;
+                result = CardTextureLoader.PremiumAnimationAvailable(card_def);
+                m_premiumTexturesInfo.Add(card_id, result);
+
+                if (result == false && logger != default && card_def.GetPortraitQuality().TextureQuality == CardPortraitQuality.NOT_LOADED)
+                    logger.Invoke("texture isn't loaded");
+
+                return result;
             }
-
-            if (logger != default && cardDef.GetPortraitQuality().TextureQuality == CardPortraitQuality.NOT_LOADED)
-                logger.Invoke("texture isn't loaded");
-
-            return false;
         }
 
         public static bool HavePremiumTexture([NotNull] this EntityBase ent, [CanBeNull] Action<string> logger = null)
@@ -67,6 +76,16 @@ namespace hearthstone_ex.Utils
         public static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this Entity ent)
         {
             return ent.GetEntityDef().SelectBestPremiumType(ent.HavePremiumTexture());
+        }
+
+        public static bool CreatedByFriendlyPlayer([NotNull] this EntityBase ent)
+        {
+            return (ent.GetCreatorId() == GameState.Get().GetFriendlySidePlayer().GetPlayerId());
+        }
+
+        public static bool ControlledByFriendlyPlayer([NotNull] this EntityBase ent)
+        {
+            return (ent.GetControllerId() == GameState.Get().GetFriendlySidePlayer().GetPlayerId());
         }
     }
 }

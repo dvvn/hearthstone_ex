@@ -58,7 +58,9 @@ namespace hearthstone_ex.Utils
 
     internal abstract class EnumsCheckerBase<T> : EnumsCheckerInfo<T>
     {
-        protected EnumsCheckerBase([NotNull] EnumsCheckerInfo<T> info) : base(info) { }
+        protected EnumsCheckerBase([NotNull] EnumsCheckerInfo<T> info) : base(info)
+        {
+        }
 
         public abstract IReadOnlyCollection<T> OtherEnums(T ignore);
         public abstract string GetErrorMsg([NotNull] IReadOnlyList<T> enums);
@@ -75,7 +77,7 @@ namespace hearthstone_ex.Utils
     internal class EnumsCheckerRange<T> : EnumsCheckerBase<T>
     {
         public readonly int AllSum;
-        private readonly List<T[]> storage;
+        private readonly IList<T[]> m_storage;
 
         [CanBeNull]
         private string GetErrorMsgRange([NotNull] IReadOnlyCollection<T> enums)
@@ -92,12 +94,14 @@ namespace hearthstone_ex.Utils
 
         public EnumsCheckerRange([NotNull] EnumsCheckerInfo<T> info) : base(info)
         {
+            var storage = new List<T[]>(this.KnownEnums.Count);
+            storage.AddRange(this.KnownEnums.Select(this.GetOtherEnums));
+
             this.AllSum = this.KnownEnums.Cast<int>().Sum();
-            this.storage = new List<T[]>(this.KnownEnums.Count);
-            this.storage.AddRange(this.KnownEnums.Select(this.GetOtherEnums));
+            this.m_storage = storage;
         }
 
-        public override IReadOnlyCollection<T> OtherEnums(T ignore) => this.storage[(int) (object) ignore];
+        public override IReadOnlyCollection<T> OtherEnums(T ignore) => this.m_storage[(int)(object)ignore];
 
         [CanBeNull]
         public override string GetErrorMsg(IReadOnlyList<T> enums) => this.GetErrorMsgBase(enums) ?? this.GetErrorMsgRange(enums) ?? this.GetErrorMsgUnordered(enums);
@@ -105,16 +109,16 @@ namespace hearthstone_ex.Utils
 
     internal class EnumsCheckerUnordered<T> : EnumsCheckerBase<T>
     {
-        private readonly Dictionary<T, T[]> storage;
+        private readonly IDictionary<T, T[]> m_storage;
 
         public EnumsCheckerUnordered([NotNull] EnumsCheckerInfo<T> info) : base(info)
         {
-            this.storage = new Dictionary<T, T[]>(this.KnownEnums.Count);
+            this.m_storage = new Dictionary<T, T[]>(this.KnownEnums.Count);
             foreach (var e in this.KnownEnums)
-                this.storage.Add(e, this.GetOtherEnums(e));
+                this.m_storage.Add(e, this.GetOtherEnums(e));
         }
 
-        public override IReadOnlyCollection<T> OtherEnums([NotNull] T ignore) => this.storage[ignore];
+        public override IReadOnlyCollection<T> OtherEnums([NotNull] T ignore) => this.m_storage[ignore];
 
         [CanBeNull]
         public override string GetErrorMsg(IReadOnlyList<T> enums) => this.GetErrorMsgBase(enums) ?? this.GetErrorMsgUnordered(enums);
@@ -130,7 +134,7 @@ namespace hearthstone_ex.Utils
             if (m_instance == null)
             {
                 var info = new EnumsCheckerInfo<T>();
-                m_instance = info.IsRange ? (EnumsCheckerBase<T>) new EnumsCheckerRange<T>(info) : new EnumsCheckerUnordered<T>(info);
+                m_instance = info.IsRange ? (EnumsCheckerBase<T>)new EnumsCheckerRange<T>(info) : new EnumsCheckerUnordered<T>(info);
             }
 
             return m_instance;

@@ -53,10 +53,13 @@
     <Compile Include="Targets\CollectionCardActors.cs" />
     <Compile Include="Targets\DeckTrayDeckTileVisual.cs" />
     <Compile Include="Targets\DialogManager.cs" />
+    <Compile Include="Targets\GameEntity.cs" />
     <Compile Include="Targets\EndTurnButton.cs" />
     <Compile Include="Targets\EnemyEmoteHandler.cs" />
     <Compile Include="Targets\Entity.cs" />
     <Compile Include="Targets\ExceptionReporterControl.cs" />
+    <Compile Include="Targets\Gameplay.cs" />
+    <Compile Include="Targets\HistoryManager.cs" />
     <Compile Include="Targets\MatchingQueueTab.cs" />
     <Compile Include="Targets\Network.cs" />
     <Compile Include="Targets\ReconnectHelperDialog.cs" />
