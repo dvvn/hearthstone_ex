@@ -80,12 +80,12 @@ namespace hearthstone_ex.Utils
 
         public static bool CreatedByFriendlyPlayer([NotNull] this EntityBase ent)
         {
-            return (ent.GetCreatorId() == GameState.Get().GetFriendlySidePlayer().GetPlayerId());
+            return ent.GetCreatorId() == GameState.Get().GetFriendlySidePlayer().GetPlayerId();
         }
 
         public static bool ControlledByFriendlyPlayer([NotNull] this EntityBase ent)
         {
-            return (ent.GetControllerId() == GameState.Get().GetFriendlySidePlayer().GetPlayerId());
+            return ent.GetControllerId() == GameState.Get().GetFriendlySidePlayer().GetPlayerId();
         }
     }
 }

@@ -52,8 +52,7 @@ namespace hearthstone_ex.Targets
                 return;
             }
 
-            var original_premium = ent.GetPremiumType();
-            if (original_premium != TAG_PREMIUM.NORMAL)
+            if (ent.GetPremiumType() != TAG_PREMIUM.NORMAL)
                 return;
 
             var tag = ent.GetBestPossiblePremiumType();
@@ -233,17 +232,8 @@ namespace hearthstone_ex.Targets
         // ReSharper disable InconsistentNaming
         private static readonly MethodInfo ShouldUpdateActorOnChangeEntity = AccessTools.Method(typeof(Ent), nameof(ShouldUpdateActorOnChangeEntity));
         private static readonly MethodInfo ShouldRestartStateSpellsOnChangeEntity = AccessTools.Method(typeof(Ent), nameof(ShouldRestartStateSpellsOnChangeEntity));
-
         private static readonly MethodInfo HandleEntityChange = AccessTools.Method(typeof(Ent), nameof(HandleEntityChange));
         // ReSharper restore InconsistentNaming
-
-        //[HarmonyPrefix]
-        //[HarmonyPatch(nameof(ShouldUpdateActorOnChangeEntity))]
-        //public static bool ShouldUpdateActorOnChangeEntity(ref bool __result)
-        //{
-        //    __result = false;
-        //    return false;
-        //}
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Ent.OnChangeEntity))]

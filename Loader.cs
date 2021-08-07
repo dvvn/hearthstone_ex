@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -17,22 +18,22 @@ namespace hearthstone_ex
     {
         public static event Action OnCleanup, OnShutdown;
 
-        private static void RenewLogWriter([CanBeNull] string FileWriterPath = null)
+        private static void RenewLogWriter([CanBeNull] string file_writer_path = null)
         {
-            var FileWriterPath_old = HarmonyFileLog.FileWriterPath;
-            var Writer_old = HarmonyFileLog.Writer;
+            var file_writer_path_old = HarmonyFileLog.FileWriterPath;
+            var writer_old = HarmonyFileLog.Writer;
 
-            if (!string.IsNullOrEmpty(FileWriterPath))
-                HarmonyFileLog.FileWriterPath = FileWriterPath;
-            HarmonyFileLog.Writer = new StreamWriter(new MemoryStream()) {AutoFlush = true};
+            if (!string.IsNullOrEmpty(file_writer_path))
+                HarmonyFileLog.FileWriterPath = file_writer_path;
+            HarmonyFileLog.Writer = new StreamWriter(new MemoryStream()) { AutoFlush = true };
 
-            if (Writer_old == null) return;
-            if (!(Writer_old is StreamWriter writer)) return;
+            if (writer_old == null) return;
+            if (!(writer_old is StreamWriter writer)) return;
             if (!(writer.BaseStream is MemoryStream stream)) return;
 
-            var bytes_used = (int) stream.Position;
+            var bytes_used = (int)stream.Position;
             if (bytes_used == 0) return;
-            using (var file = File.Create(FileWriterPath_old, bytes_used))
+            using (var file = File.Create(file_writer_path_old, bytes_used))
             {
                 file.Write(stream.GetBuffer(), 0, bytes_used);
             }
@@ -69,25 +70,25 @@ namespace hearthstone_ex
 
         private static bool SetupLogging()
         {
-            const string _File_name = "PatchResult";
-            var _Logs_directory = Logger.LogsPath;
+            const string fileName = "PatchResult";
+            var logs_directory = Logger.LogsPath;
 
-            var dir_info = new DirectoryInfo(_Logs_directory);
-            foreach (var file in dir_info.EnumerateFiles().Where(file => file.Name.StartsWith(_File_name, StringComparison.Ordinal)))
+            var dir_info = new DirectoryInfo(logs_directory);
+            foreach (var file in dir_info.EnumerateFiles().Where(file => file.Name.StartsWith(fileName, StringComparison.Ordinal)))
                 file.Delete();
             //string FilePath = Path.Combine(logs_path, $"{FileName}_default.log");
 
-            void SetLogPath(string postfix, string extension)
+            void _SetLogPath(string postfix, string extension)
             {
-                var name = $"{_File_name}_{postfix}";
+                var name = $"{fileName}_{postfix}";
                 if (!string.IsNullOrEmpty(extension))
                     name += $".{extension}";
 
-                var FileWriterPath = Path.Combine(_Logs_directory, name);
-                RenewLogWriter(FileWriterPath);
+                var file_writer_path = Path.Combine(logs_directory, name);
+                RenewLogWriter(file_writer_path);
             }
 
-            SetLogPath("default", "log");
+            _SetLogPath("default", "log");
 #if DEBUG
             HarmonyLog.ChannelFilter = HarmonyLogChannel.All;
             HarmonyFileLog.Enabled = true;
@@ -101,15 +102,15 @@ namespace hearthstone_ex
                 var target_class = AccessTools.TypeByName("LogArchive");
                 var target_instance = AccessTools.CreateInstance(target_class);
                 var make_log = AccessTools.Method(target_class, "MakeLogPath");
-                make_log.Invoke(target_instance, new object[] {_Logs_directory});
+                make_log.Invoke(target_instance, new object[] { logs_directory });
 
                 var log_path_prop = AccessTools.Property(target_class, "LogPath");
-                var log_str = (string) log_path_prop.GetValue(target_instance, null);
+                var log_str = (string)log_path_prop.GetValue(target_instance, null);
 
-                const string _Find_str = "hearthstone_";
-                var offset = log_str.LastIndexOf(_Find_str, StringComparison.Ordinal) + _Find_str.Length;
+                const string findStr = "hearthstone_";
+                var offset = log_str.LastIndexOf(findStr, StringComparison.Ordinal) + findStr.Length;
                 var log_info = log_str.Substring(offset);
-                SetLogPath(log_info, null);
+                _SetLogPath(log_info, null);
 
                 return true;
             }
@@ -122,14 +123,74 @@ namespace hearthstone_ex
             }
         }
 
-        private static Harmony Patcher;
+        private static Harmony m_patcher;
+
+        private struct EnumInfo
+        {
+            public string[] Names;
+            public int[] Values;
+        }
+
+        private static bool ValidateSharedData()
+        {
+#if DEBUG
+            return true;
+#else
+
+            var resolved_types = new Dictionary<string, EnumInfo>();
+
+            void _ValidateEnum<T>(string name, T value)
+                where T : Enum
+            {
+                var type = (typeof(T));
+                if (!resolved_types.TryGetValue(type.Name, out var info))
+                {
+                    info = new EnumInfo { Names = type.GetEnumNames(), Values = type.GetEnumValues().Cast<int>().ToArray() };
+                    resolved_types.Add(name, info);
+                }
+
+                for (var i = 0; i < info.Names.Length; i++)
+                {
+                    if (info.Names[i] == name)
+                    {
+                        if (info.Values[i] == (int)(object)value) return;
+                        throw new Exception($"Enum {name} changed from {value} to {info.Values[i]}");
+                    }
+                }
+
+                throw new Exception($"Enum {name} not found");
+            }
+
+            try
+            {
+                _ValidateEnum(nameof(GAME_TAG.HAS_DIAMOND_QUALITY), GAME_TAG.HAS_DIAMOND_QUALITY);
+                _ValidateEnum(nameof(GAME_TAG.PREMIUM), GAME_TAG.PREMIUM);
+                return true;
+            }
+            catch (Exception e)
+            {
+                if (!HarmonyFileLog.Enabled)
+                {
+                    if (Environment.GetEnvironmentVariable("HARMONY_DEBUG") == null)
+                        HarmonyFileLog.Enabled = true;
+                    else
+                        return false;
+                }
+
+                HarmonyFileLog.Writer.WriteLine(e.ToString());
+                ShowLogFile();
+                return false;
+            }
+
+#endif
+        }
 
         private static bool ApplyPatches()
         {
             try
             {
-                Patcher = new Harmony("patcher");
-                Patcher.PatchAll();
+                m_patcher = new Harmony("patcher");
+                m_patcher.PatchAll();
 #if DEBUG
                 ShowLogFile();
 #endif
@@ -141,7 +202,7 @@ namespace hearthstone_ex
                     ShowLogFile();
                 else if (Environment.GetEnvironmentVariable("HARMONY_DEBUG") == null)
                 {
-                    Patcher.UnpatchSelf();
+                    m_patcher.UnpatchSelf();
                     HarmonyFileLog.Enabled = true;
 
                     return ApplyPatches();
@@ -172,7 +233,7 @@ namespace hearthstone_ex
                 HarmonyFileLog.Enabled = Harmony.DEBUG = false;
             };
 
-            if (!SetupLogging() || !ApplyPatches()) ExitApp();
+            if (!SetupLogging() || !ValidateSharedData() || !ApplyPatches()) ExitApp();
         }
     }
 }
