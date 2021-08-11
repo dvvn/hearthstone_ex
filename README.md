@@ -6,6 +6,8 @@ All possible cards are golden in game and inside decks
 
 The turn ends automatically
 
+Achievements claimed automatically
+
 Opponents have no emotion
 
 Bob never speak
