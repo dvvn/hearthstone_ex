@@ -125,18 +125,19 @@ namespace hearthstone_ex
 
         private static Harmony m_patcher;
 
+#if !DEBUG
         private struct EnumInfo
         {
             public string[] Names;
             public int[] Values;
         }
+#endif
 
         private static bool ValidateSharedData()
         {
 #if DEBUG
             return true;
 #else
-
             var resolved_types = new Dictionary<string, EnumInfo>();
 
             void _ValidateEnum<T>(string name, T value)
