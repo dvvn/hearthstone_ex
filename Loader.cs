@@ -143,7 +143,7 @@ namespace hearthstone_ex
             void _ValidateEnum<T>(string name, T value)
                 where T : Enum
             {
-                var type = (typeof(T));
+                var type = typeof(T);
                 if (!resolved_types.TryGetValue(type.Name, out var info))
                 {
                     info = new EnumInfo { Names = type.GetEnumNames(), Values = type.GetEnumValues().Cast<int>().ToArray() };

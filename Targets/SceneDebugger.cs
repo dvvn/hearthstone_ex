@@ -20,13 +20,13 @@ namespace hearthstone_ex.Targets
 
         [HarmonyPrefix]
         [HarmonyArgument(0, "value")]
-        [HarmonyPatch("SetDevTimescaleMultiplier")]
+        [HarmonyPatch(nameof(SetDevTimescaleMultiplier))]
         public static bool SetDevTimescaleMultiplier(ref float value)
         {
             var mgr = TimeScaleMgr.Get();
-            var Multiplier = mgr.GetTimeScaleMultiplier();
+            var multiplier = mgr.GetTimeScaleMultiplier();
 
-            bool IsDifferent(float val) => val != Multiplier;
+            bool IsDifferent(float val) => val != multiplier;
 
             if (!IsDifferent(value))
                 return false;

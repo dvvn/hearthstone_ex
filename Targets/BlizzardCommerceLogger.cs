@@ -9,11 +9,11 @@ namespace hearthstone_ex.Targets
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(logger.OnLogEvent))]
-        public static bool OnLogEvent(CommerceLogLevel level, string message)
+        public static bool OnLogEvent(CommerceLogLevel logLevel, string message)
         {
             //i dont want shit in logs
 
-            return level == CommerceLogLevel.ERROR || level == CommerceLogLevel.FATAL;
+            return logLevel == CommerceLogLevel.ERROR || logLevel == CommerceLogLevel.FATAL;
 
 #if false
             switch (level)
