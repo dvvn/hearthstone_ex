@@ -19,9 +19,14 @@ namespace hearthstone_ex.Targets
             var ent = actor.GetEntity();
             if (ent == null)
                 return;
-            if (!ent.IsHero() && !ent.IsHeroPower())
+
+            if (!ent.IsHero() || !ent.IsHeroPower())
+            {
                 return;
-            actor.SetPremium(ent.GetBestPossiblePremiumType(msg => Logger.Message(msg, nameof(CollectionCardActors))));
+            }
+
+            var premium = ent.GetBestPossiblePremiumType(msg => Logger.Message(msg, nameof(CollectionCardActors)));
+            actor.SetPremium(premium);
         }
     }
 }

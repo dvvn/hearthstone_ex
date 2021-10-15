@@ -22,8 +22,19 @@ namespace hearthstone_ex.Targets
             if (!ent.IsHero() && !ent.IsHeroPower())
                 return;
 
-            premium = ent.GetBestPossiblePremiumType(msg => Logger.Message(msg, nameof(CollectionManager)));
+            //Mercenaries
+            //Lettuce
+
+            var new_premium = ent.GetBestPossiblePremiumType(msg => Logger.Message(msg, nameof(CollectionManager)));
+            //Logger.Message($"{ent}: premium tag changed from {premium} to {new_premium}");
+            premium = new_premium;
         }
+
+        //[HarmonyPrefix]
+        //[HarmonyPatch(nameof(RegisterMercenary))]
+        //public static void RegisterMercenary(Manager __instance, int mercenaryDbId)
+        //{
+        //}
     }
 
 #if false

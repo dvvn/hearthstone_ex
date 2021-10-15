@@ -12,8 +12,6 @@ using Tray = DeckTrayDeckTileVisual;
 
 namespace hearthstone_ex.Targets
 {
-    using System.Diagnostics.CodeAnalysis;
-
     //logging
     public partial class DeckTrayDeckTileVisual : LoggerGui.Static<DeckTrayDeckTileVisual>
     {
@@ -84,7 +82,8 @@ namespace hearthstone_ex.Targets
         }
 
         [NotNull]
-        private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot, TAG_PREMIUM add, [NotNull] IEnumerable<TAG_PREMIUM> remove)
+        private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot, TAG_PREMIUM add,
+            [NotNull] IEnumerable<TAG_PREMIUM> remove)
         {
             var slot = CopySlot(deck_slot);
 
@@ -105,7 +104,8 @@ namespace hearthstone_ex.Targets
         }
 
         [NotNull]
-        private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot, TAG_PREMIUM add, [NotNull] params TAG_PREMIUM[] remove)
+        private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot, TAG_PREMIUM add,
+            [NotNull] params TAG_PREMIUM[] remove)
         {
             return CopySlot(deck_slot, add, remove.AsEnumerable());
         }
@@ -128,7 +128,8 @@ namespace hearthstone_ex.Targets
     //core funtions
     public partial class DeckTrayDeckTileVisual
     {
-        private static bool ForceNonPremiumMaterial(TAG_PREMIUM normal_tag, TAG_PREMIUM ideal_tag, bool in_arena, Actor deck_tile_actor, CallerInfo info_full)
+        private static bool ForceNonPremiumMaterial(TAG_PREMIUM normal_tag, TAG_PREMIUM ideal_tag, bool in_arena,
+            Actor deck_tile_actor, CallerInfo info_full)
         {
             if (in_arena && Options.Get().GetBool(Option.HAS_DISABLED_PREMIUMS_THIS_DRAFT))
             {
@@ -138,7 +139,8 @@ namespace hearthstone_ex.Targets
 
             if (ideal_tag <= normal_tag)
             {
-                LogMessage(deck_tile_actor, $"Material forced to {normal_tag}, because no others available!", info_full);
+                LogMessage(deck_tile_actor, $"Material forced to {normal_tag}, because no others available!",
+                    info_full);
                 return true;
             }
 
@@ -146,8 +148,8 @@ namespace hearthstone_ex.Targets
         }
 
         private static TAG_PREMIUM GetPremiumMaterial(bool in_arena, bool is_ghosted,
-                                                      [NotNull] CollectionDeckSlot deck_slot, [NotNull] CollectionDeckTileActor deck_tile_actor,
-                                                      CallerInfo info)
+            [NotNull] CollectionDeckSlot deck_slot, [NotNull] CollectionDeckTileActor deck_tile_actor,
+            CallerInfo info)
         {
             //copy every slot for future modify
             //because we must have the same slot on card with 2+ copies
@@ -161,7 +163,7 @@ namespace hearthstone_ex.Targets
                 return DEFAULT_TAG;
             }
 
-            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType(msg => Logger.Message(msg,info));
+            var IDEAL_TAG = deck_tile_actor.GetEntityDef().GetBestPossiblePremiumType(msg => Logger.Message(msg, info));
             var NORMAL_TAG = deck_slot.UnPreferredPremium;
             if (ForceNonPremiumMaterial(NORMAL_TAG, IDEAL_TAG, in_arena, deck_tile_actor, info))
             {
@@ -190,7 +192,8 @@ namespace hearthstone_ex.Targets
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SetUpActor))]
         public static bool SetUpActor(bool ___m_inArena, bool ___m_useSliderAnimations,
-                                      [CanBeNull] CollectionDeckSlot ___m_slot, [CanBeNull] CollectionDeckTileActor ___m_actor, [NotNull] CollectionDeck ___m_deck)
+            [CanBeNull] CollectionDeckSlot ___m_slot, [CanBeNull] CollectionDeckTileActor ___m_actor,
+            [NotNull] CollectionDeck ___m_deck)
         {
             //full rebuild of game's function
 
@@ -206,25 +209,25 @@ namespace hearthstone_ex.Targets
             LogGhostedState(___m_actor, ghosted, new CallerInfo());
             ___m_actor.SetGhosted(ghosted);
 
-            var premium_tag = GetPremiumMaterial(___m_inArena, ghosted != GhostedState.NONE, ___m_slot, ___m_actor, new CallerInfo());
+            var premium_tag = GetPremiumMaterial(___m_inArena, ghosted != GhostedState.NONE, ___m_slot, ___m_actor,
+                new CallerInfo());
             ___m_actor.SetPremium(premium_tag);
 
             var card_is_unique = entity_def.IsElite() && (!___m_inArena || ___m_slot.Count <= 1);
             ___m_actor.UpdateDeckCardProperties(card_is_unique, false, ___m_slot.Count, ___m_useSliderAnimations);
 
-            DefLoader.Get()
-                     .LoadCardDef(entity_def.GetCardId(), (cardID, cardDef, data) =>
-                                                          {
-                                                              using (cardDef)
-                                                              {
-                                                                  if (!cardID.Equals(___m_actor.GetEntityDef().GetCardId()))
-                                                                      return;
-                                                                  ___m_actor.SetCardDef(cardDef);
-                                                                  ___m_actor.UpdateAllComponents();
-                                                                  ___m_actor.UpdateMaterial(cardDef.CardDef.GetDeckCardBarPortrait());
-                                                                  ___m_actor.UpdateGhostTileEffect();
-                                                              }
-                                                          }, quality: new CardPortraitQuality(1, premium_tag));
+            DefLoader.Get().LoadCardDef(entity_def.GetCardId(), (cardID, cardDef, data) =>
+            {
+                using (cardDef)
+                {
+                    if (!cardID.Equals(___m_actor.GetEntityDef().GetCardId()))
+                        return;
+                    ___m_actor.SetCardDef(cardDef);
+                    ___m_actor.UpdateAllComponents();
+                    ___m_actor.UpdateMaterial(cardDef.CardDef.GetDeckCardBarPortrait());
+                    ___m_actor.UpdateGhostTileEffect();
+                }
+            }, quality: new CardPortraitQuality(1, premium_tag));
 
             return false;
         }
