@@ -242,10 +242,6 @@
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.BaselibModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.BaselibModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.ClothModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ClothModule.dll</HintPath>
@@ -274,10 +270,6 @@
     <Reference Include="UnityEngine.DirectorModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.DirectorModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.FileSystemHttpModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.FileSystemHttpModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.GameCenterModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -319,10 +311,6 @@
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.LocalizationModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.Networking">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.Networking.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
@@ -357,10 +345,6 @@
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SharedInternalsModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.SpatialTracking">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SpatialTracking.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.SpriteMaskModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SpriteMaskModule.dll</HintPath>
@@ -374,11 +358,6 @@
     <Reference Include="UnityEngine.StreamingModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.StreamingModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.StyleSheetsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.StyleSheetsModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.SubstanceModule">
@@ -408,15 +387,6 @@
     <Reference Include="UnityEngine.TilemapModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TilemapModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.Timeline, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.Timeline.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.TimelineModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TimelineModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TLSModule">
@@ -532,6 +502,16 @@ echo [UnityDoorstop] &gt;&gt; %25target%25
 echo enabled=true &gt;&gt; %25target%25
 echo targetAssembly=$(TargetPath)  &gt;&gt; %25target%25
 echo redirectOutputLog=false &gt;&gt; %25target%25
-echo ignoreDisableSwitch=false &gt;&gt; %25target%25</PostBuildEvent>
+echo ignoreDisableSwitch=false &gt;&gt; %25target%25
+if "$(Configuration)" == "DebugDISABLED" goto :debug
+goto :exit
+
+:debug
+echo debugAddress=127.0.0.1:10000 &gt;&gt; %25target%25
+echo debugEnabled=true &gt;&gt; %25target%25
+echo debugSuspend=true &gt;&gt; %25target%25
+:exit
+
+</PostBuildEvent>
   </PropertyGroup>
 </Project>
