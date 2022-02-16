@@ -7,112 +7,112 @@ using Debugger = SceneDebugger;
 
 namespace hearthstone_ex.Targets
 {
-    [HarmonyPatch(typeof(Debugger))]
-    public partial class SceneDebugger : LoggerGui.Static<SceneDebugger>
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("GetDevTimescaleMultiplier")]
-        public static bool GetDevTimescaleMultiplier(ref float __result)
-        {
-            __result = Options.Get().GetFloat(Option.DEV_TIMESCALE, 1f);
-            return false;
-        }
+	[HarmonyPatch(typeof(Debugger))]
+	public partial class SceneDebugger : LoggerGui.Static<SceneDebugger>
+	{
+		[HarmonyPrefix]
+		[HarmonyPatch("GetDevTimescaleMultiplier")]
+		public static bool GetDevTimescaleMultiplier(ref float __result)
+		{
+			__result = Options.Get( ).GetFloat(Option.DEV_TIMESCALE, 1f);
+			return false;
+		}
 
-        [HarmonyPrefix]
-        [HarmonyArgument(0, "value")]
-        [HarmonyPatch(nameof(SetDevTimescaleMultiplier))]
-        public static bool SetDevTimescaleMultiplier(ref float value)
-        {
-            var mgr = TimeScaleMgr.Get();
-            var multiplier = mgr.GetTimeScaleMultiplier();
+		[HarmonyPrefix]
+		[HarmonyArgument(0, "value")]
+		[HarmonyPatch(nameof(SetDevTimescaleMultiplier))]
+		public static bool SetDevTimescaleMultiplier(ref float value)
+		{
+			var mgr = TimeScaleMgr.Get( );
+			var multiplier = mgr.GetTimeScaleMultiplier( );
 
-            bool IsDifferent(float val) => val != multiplier;
+			bool IsDifferent(float val) => val != multiplier;
 
-            if (!IsDifferent(value))
-                return false;
+			if (!IsDifferent(value))
+				return false;
 
-            float new_value;
-            if (value == 0.0)
-                new_value = 0.0001f;
-            else
-                new_value = (float) Math.Round(value, 1);
+			var new_value = value == 0.0 ? 0.0001f : (float) Math.Round(value, 1);
+			if (!IsDifferent(new_value))
+				return false;
 
-            if (!IsDifferent(new_value))
-                return false;
+			Options.Get( ).SetFloat(Option.DEV_TIMESCALE, new_value);
+			mgr.SetTimeScaleMultiplier(new_value);
 
-            Options.Get().SetFloat(Option.DEV_TIMESCALE, new_value);
-            mgr.SetTimeScaleMultiplier(new_value);
+			return false;
+		}
+	}
 
-            return false;
-        }
-    }
+	public partial class SceneDebugger
+	{
+		private sealed class GameplayWindowCloser
+		{
+			private readonly DebuggerGuiWindow _window;
+			private bool _wantFix;
+			private bool _wantPrintLog; //added to prevent ~500 internal calls at same time
 
-    public partial class SceneDebugger
-    {
-        private sealed class GameplayWindowCloser
-        {
-            private readonly DebuggerGuiWindow Window_;
-            private bool WantFix_;
-            private bool WantPrintLog_; //added to prevent ~500 internal calls at same time
+			public void Update( )
+			{
+				if (ScriptDebugDisplay.Get( ).m_isDisplayed || !Options.Get( ).GetBool(Option.HUD))
+					return;
+				var state = GameState.Get( );
+				_wantFix = state != null && state.GetSlushTimeTracker( ).GetAccruedLostTimeInSeconds( ) > GameplayDebug.LOST_SLUSH_TIME_ERROR_THRESHOLD_SECONDS;
+				TryEndableLogging( );
+			}
 
-            public void Update()
-            {
-                if (ScriptDebugDisplay.Get().m_isDisplayed || !Options.Get().GetBool(Option.HUD))
-                    return;
-                var state = GameState.Get();
-                this.WantFix_ = state != null && state.GetSlushTimeTracker().GetAccruedLostTimeInSeconds() > GameplayDebug.LOST_SLUSH_TIME_ERROR_THRESHOLD_SECONDS;
-                this.TryEndableLogging();
-            }
+			[Conditional("DEBUG")]
+			private void TryEndableLogging( )
+			{
+				if (_wantPrintLog || _wantFix)
+					return;
+				_wantPrintLog = true;
+			}
 
-            [Conditional("DEBUG")]
-            private void TryEndableLogging()
-            {
-                if (!this.WantPrintLog_ && !this.WantFix_) this.WantPrintLog_ = true;
-            }
+			[Conditional("DEBUG")]
+			private void LogMessage( )
+			{
+				if (!_wantPrintLog)
+					return;
+				Logger.Message("GameplayWindow forced to close!", string.Empty);
+				_wantPrintLog = false;
+			}
 
-            [Conditional("DEBUG")]
-            private void LogMessage()
-            {
-                if (!this.WantPrintLog_) return;
-                Logger.Message("GameplayWindow forced to close!", string.Empty);
-                this.WantPrintLog_ = false;
-            }
+			private void Apply( )
+			{
+				if (!_wantFix)
+					return;
 
-            private void Apply()
-            {
-                if (!this.WantFix_)
-                    return;
+				LogMessage( );
 
-                this.LogMessage();
+				_wantFix = false;
+				_window.IsShown = false;
+			}
 
-                this.WantFix_ = false;
-                this.Window_.IsShown = false;
-            }
+			public GameplayWindowCloser([NotNull] DebuggerGuiWindow window)
+			{
+				Logger.Message("GameplayWindow closer created!", string.Empty);
+				_window = window;
+				Update( );
+				window.OnChanged += Apply;
+			}
 
-            public GameplayWindowCloser([NotNull] DebuggerGuiWindow window)
-            {
-                Logger.Message("GameplayWindow closer created!", string.Empty);
-                this.Window_ = window;
-                this.Update();
-                window.OnChanged += this.Apply;
-            }
+			~GameplayWindowCloser( )
+			{
+				if (_window == null)
+					return;
+				_window.OnChanged -= Apply;
+			}
+		}
 
-            ~GameplayWindowCloser()
-            {
-                if (this.Window_ != null) this.Window_.OnChanged -= this.Apply;
-            }
-        }
+		private static GameplayWindowCloser _windowCloser;
 
-        private static GameplayWindowCloser Closer_;
-
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(OnGUI))]
-        public static void OnGUI(DebuggerGuiWindow ___m_gameplayWindow)
-        {
-            if (Closer_ == null /*|| Closer_.Window_ != ___m_gameplayWindow*/)
-                Closer_ = new GameplayWindowCloser(___m_gameplayWindow);
-            else
-                Closer_.Update();
-        }
-    }
+		[HarmonyPrefix]
+		[HarmonyPatch(nameof(OnGUI))]
+		public static void OnGUI(DebuggerGuiWindow ___m_gameplayWindow)
+		{
+			if (_windowCloser == null)
+				_windowCloser = new GameplayWindowCloser(___m_gameplayWindow);
+			else
+				_windowCloser.Update( );
+		}
+	}
 }

@@ -4,9 +4,9 @@ using Tab = global::MatchingQueueTab;
 
 namespace hearthstone_ex.Targets
 {
-    [HarmonyPatch(typeof(Tab))]
-    public class MatchingQueueTab //: Utils.LoggerGui.Static<MatchingQueueTab>
-    {
+	[HarmonyPatch(typeof(Tab))]
+	public class MatchingQueueTab //: Utils.LoggerGui.Static<MatchingQueueTab>
+	{
 #if false
 //this breaks the engine
         private static readonly MethodInfo m_initTimeStringSet = AccessTools.Method(typeof(global::MatchingQueueTab), "InitTimeStringSet");
@@ -25,23 +25,22 @@ namespace hearthstone_ex.Targets
         }
 #endif
 
-        private static int m_lastFrameCount;
+		private static int _lastFrameCount;
 
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(InitTimeStringSet))]
-        public static void InitTimeStringSet(ref float ___m_timeInQueue)
-        {
+		[HarmonyPrefix]
+		[HarmonyPatch(nameof(InitTimeStringSet))]
+		public static void InitTimeStringSet(ref float ___m_timeInQueue)
+		{
+			//fix waiting timer while timescale is changed
 
-            //fix waiting timer while timescale is changed
+			var count = Time.frameCount;
+			if (count != _lastFrameCount)
+			{
+				_lastFrameCount = count;
 
-            var count = Time.frameCount;
-            if (count != m_lastFrameCount)
-            {
-                m_lastFrameCount = count;
-
-                ___m_timeInQueue -= Time.deltaTime;
-                ___m_timeInQueue += Time.unscaledDeltaTime;
-            }
-        }
-    }
+				___m_timeInQueue -= Time.deltaTime;
+				___m_timeInQueue += Time.unscaledDeltaTime;
+			}
+		}
+	}
 }

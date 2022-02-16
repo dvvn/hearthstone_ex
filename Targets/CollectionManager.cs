@@ -3,7 +3,6 @@ using hearthstone_ex.Utils;
 using JetBrains.Annotations;
 using System;
 using Manager = CollectionManager;
-using static hearthstone_ex.Utils.Wrapper;
 
 namespace hearthstone_ex.Targets
 {
@@ -21,15 +20,12 @@ namespace hearthstone_ex.Targets
 				return;
 			if (ent == null)
 				return;
-			if (!ent.IsHero() || !ent.IsHeroSkin())
+			if (!ent.IsHero( ) || !ent.IsHeroSkin( ))
 				return;
-
-			//Mercenaries
-			//Lettuce
 
 			var logger = new Action<string>(msg => Logger.Message(msg, nameof(CollectionManager)));
 			var new_premium = ent.GetBestPossiblePremiumType(logger);
-			logger($"{ent}: premium tag changed from {premium} to {new_premium} ({Wrapper.ToString(ent.GetTags())})");
+			logger($"{ent}: premium tag changed from {premium} to {new_premium} ({TagConvertor.ToString(ent.GetTags( ))})");
 			premium = new_premium;
 		}
 	}

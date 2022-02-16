@@ -6,138 +6,141 @@ using JetBrains.Annotations;
 
 namespace hearthstone_ex.Utils
 {
-    internal class EnumsCheckerInfo<T>
-    {
-        public readonly IReadOnlyCollection<T> KnownEnums;
-        public readonly bool IsRange;
+	internal class EnumsCheckerInfo<T>
+	{
+		public readonly IReadOnlyCollection<T> KnownEnums;
+		public readonly bool IsRange;
 
-        public EnumsCheckerInfo()
-        {
-            this.KnownEnums = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
-            var counter = 0;
-            this.IsRange = this.KnownEnums.Cast<int>().OrderBy(x => x).All(i => i == counter++);
-        }
+		public EnumsCheckerInfo( )
+		{
+			KnownEnums = Enum.GetValues(typeof(T)).Cast<T>( ).ToArray( );
+			var counter = 0;
+			IsRange = KnownEnums.Cast<int>( ).OrderBy(x => x).All(i => i == counter++);
+		}
 
-        protected EnumsCheckerInfo([NotNull] EnumsCheckerInfo<T> other)
-        {
-            this.KnownEnums = other.KnownEnums;
-            this.IsRange = other.IsRange;
-        }
+		protected EnumsCheckerInfo([NotNull] EnumsCheckerInfo<T> other)
+		{
+			KnownEnums = other.KnownEnums;
+			IsRange = other.IsRange;
+		}
 
-        [NotNull]
-        protected T[] GetOtherEnums(T ignore) => this.KnownEnums.Where(e => e.Equals(ignore) == false).ToArray();
+		[NotNull]
+		protected T[ ] GetOtherEnums(T ignore) => KnownEnums.Where(e => e.Equals(ignore) == false).ToArray( );
 
-        [CanBeNull]
-        protected string GetErrorMsgBase([NotNull] IReadOnlyCollection<T> enums)
-        {
-            if (enums.Count > 1)
-            {
-                if (enums.Count == 0)
-                    return "Value cannot be an empty collection.";
-                if (enums.Count > this.KnownEnums.Count)
-                    return "Duplicated enum found";
-            }
+		[CanBeNull]
+		protected string GetErrorMsgBase([NotNull] IReadOnlyCollection<T> enums)
+		{
+			if (enums.Count > 1)
+			{
+				if (enums.Count == 0)
+					return "Value cannot be an empty collection.";
+				if (enums.Count > KnownEnums.Count)
+					return "Duplicated enum found";
+			}
 
-            return null;
-        }
+			return null;
+		}
 
-        [CanBeNull]
-        protected string GetErrorMsgUnordered([NotNull] IReadOnlyList<T> enums)
-        {
-            for (var i = 0; i < enums.Count - 1; i++)
-            {
-                var first_enum = enums[i];
-                var other_enums = enums.Skip(i + 1);
-                if (other_enums.Contains(first_enum))
-                    return "Duplicated enum found (different Length)";
-            }
+		[CanBeNull]
+		protected string GetErrorMsgUnordered([NotNull] IReadOnlyList<T> enums)
+		{
+			for (var i = 0; i < enums.Count - 1; i++)
+			{
+				var firstEnum = enums[i];
+				var otherEnums = enums.Skip(i + 1);
+				if (otherEnums.Contains(firstEnum))
+					return "Duplicated enum found (different Length)";
+			}
 
-            return null;
-        }
-    }
+			return null;
+		}
+	}
 
-    internal abstract class EnumsCheckerBase<T> : EnumsCheckerInfo<T>
-    {
-        protected EnumsCheckerBase([NotNull] EnumsCheckerInfo<T> info) : base(info)
-        {
-        }
+	internal abstract class EnumsCheckerBase<T> : EnumsCheckerInfo<T>
+	{
+		protected EnumsCheckerBase([NotNull] EnumsCheckerInfo<T> info)
+			: base(info)
+		{
+		}
 
-        public abstract IReadOnlyCollection<T> OtherEnums(T ignore);
-        public abstract string GetErrorMsg([NotNull] IReadOnlyList<T> enums);
+		public abstract IReadOnlyCollection<T> OtherEnums(T ignore);
+		public abstract string GetErrorMsg([NotNull] IReadOnlyList<T> enums);
 
-        [Conditional("DEBUG")]
-        public void Check([NotNull] IReadOnlyList<T> enums)
-        {
-            var error_msg = this.GetErrorMsg(enums);
-            if (error_msg != null)
-                throw new ArgumentException(error_msg, nameof(enums));
-        }
-    }
+		[Conditional("DEBUG")]
+		public void Check([NotNull] IReadOnlyList<T> enums)
+		{
+			var errorMsg = GetErrorMsg(enums);
+			if (errorMsg != null)
+				throw new ArgumentException(errorMsg, nameof(enums));
+		}
+	}
 
-    internal class EnumsCheckerRange<T> : EnumsCheckerBase<T>
-    {
-        public readonly int AllSum;
-        private readonly IList<T[]> m_storage;
+	internal class EnumsCheckerRange<T> : EnumsCheckerBase<T>
+	{
+		public readonly int AllSum;
+		private readonly IList<T[ ]> _storage;
 
-        [CanBeNull]
-        private string GetErrorMsgRange([NotNull] IReadOnlyCollection<T> enums)
-        {
-            if (enums.Count == this.KnownEnums.Count)
-            {
-                var sum = enums.Cast<int>().Sum();
-                if (sum != this.AllSum)
-                    return "Duplicated enum found (same Length)";
-            }
+		[CanBeNull]
+		private string GetErrorMsgRange([NotNull] IReadOnlyCollection<T> enums)
+		{
+			if (enums.Count == KnownEnums.Count)
+			{
+				var sum = enums.Cast<int>( ).Sum( );
+				if (sum != AllSum)
+					return "Duplicated enum found (same Length)";
+			}
 
-            return null;
-        }
+			return null;
+		}
 
-        public EnumsCheckerRange([NotNull] EnumsCheckerInfo<T> info) : base(info)
-        {
-            var storage = new List<T[]>(this.KnownEnums.Count);
-            storage.AddRange(this.KnownEnums.Select(this.GetOtherEnums));
+		public EnumsCheckerRange([NotNull] EnumsCheckerInfo<T> info)
+			: base(info)
+		{
+			var storage = new List<T[ ]>(KnownEnums.Count);
+			storage.AddRange(KnownEnums.Select(GetOtherEnums));
 
-            this.AllSum = this.KnownEnums.Cast<int>().Sum();
-            this.m_storage = storage;
-        }
+			AllSum = KnownEnums.Cast<int>( ).Sum( );
+			_storage = storage;
+		}
 
-        public override IReadOnlyCollection<T> OtherEnums(T ignore) => this.m_storage[(int)(object)ignore];
+		public override IReadOnlyCollection<T> OtherEnums(T ignore) => _storage[(int) (object) ignore];
 
-        [CanBeNull]
-        public override string GetErrorMsg(IReadOnlyList<T> enums) => this.GetErrorMsgBase(enums) ?? this.GetErrorMsgRange(enums) ?? this.GetErrorMsgUnordered(enums);
-    }
+		[CanBeNull]
+		public override string GetErrorMsg(IReadOnlyList<T> enums) => GetErrorMsgBase(enums) ?? GetErrorMsgRange(enums) ?? GetErrorMsgUnordered(enums);
+	}
 
-    internal class EnumsCheckerUnordered<T> : EnumsCheckerBase<T>
-    {
-        private readonly IDictionary<T, T[]> m_storage;
+	internal class EnumsCheckerUnordered<T> : EnumsCheckerBase<T>
+	{
+		private readonly IDictionary<T, T[ ]> _storage;
 
-        public EnumsCheckerUnordered([NotNull] EnumsCheckerInfo<T> info) : base(info)
-        {
-            this.m_storage = new Dictionary<T, T[]>(this.KnownEnums.Count);
-            foreach (var e in this.KnownEnums)
-                this.m_storage.Add(e, this.GetOtherEnums(e));
-        }
+		public EnumsCheckerUnordered([NotNull] EnumsCheckerInfo<T> info)
+			: base(info)
+		{
+			_storage = new Dictionary<T, T[ ]>(KnownEnums.Count);
+			foreach (var e in KnownEnums)
+				_storage.Add(e, GetOtherEnums(e));
+		}
 
-        public override IReadOnlyCollection<T> OtherEnums([NotNull] T ignore) => this.m_storage[ignore];
+		public override IReadOnlyCollection<T> OtherEnums([NotNull] T ignore) => _storage[ignore];
 
-        [CanBeNull]
-        public override string GetErrorMsg(IReadOnlyList<T> enums) => this.GetErrorMsgBase(enums) ?? this.GetErrorMsgUnordered(enums);
-    }
+		[CanBeNull]
+		public override string GetErrorMsg(IReadOnlyList<T> enums) => GetErrorMsgBase(enums) ?? GetErrorMsgUnordered(enums);
+	}
 
-    internal class EnumsChecker<T>
-    {
-        private static EnumsCheckerBase<T> m_instance;
+	internal class EnumsChecker<T>
+	{
+		private static EnumsCheckerBase<T> _instance;
 
-        [NotNull]
-        public static EnumsCheckerBase<T> Get()
-        {
-            if (m_instance == null)
-            {
-                var info = new EnumsCheckerInfo<T>();
-                m_instance = info.IsRange ? (EnumsCheckerBase<T>)new EnumsCheckerRange<T>(info) : new EnumsCheckerUnordered<T>(info);
-            }
+		[NotNull]
+		public static EnumsCheckerBase<T> Get( )
+		{
+			if (_instance == null)
+			{
+				var info = new EnumsCheckerInfo<T>( );
+				_instance = info.IsRange ? (EnumsCheckerBase<T>) new EnumsCheckerRange<T>(info) : new EnumsCheckerUnordered<T>(info);
+			}
 
-            return m_instance;
-        }
-    }
+			return _instance;
+		}
+	}
 }

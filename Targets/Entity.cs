@@ -1,4 +1,3 @@
-using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,302 +7,308 @@ using JetBrains.Annotations;
 using hearthstone_ex.Utils;
 using Ent = Entity;
 using Net = Network;
-using Gs = GameState;
 
 namespace hearthstone_ex.Targets
 {
-    [HarmonyPatch(typeof(Ent))]
-    public partial class Entity : LoggerGui.Static<Entity>
-    {
-        private static bool UseRealGoldenTag()
-        {
-            return SpectatorManager.Get().IsSpectatingOrWatching || GameMgr.Get().IsBattlegrounds();
-        }
+	[HarmonyPatch(typeof(Ent))]
+	public partial class Entity : LoggerGui.Static<Entity>
+	{
+		private static bool UseRealGoldenTag( )
+		{
+			return SpectatorManager.Get( ).IsSpectatingOrWatching || GameMgr.Get( ).IsBattlegrounds( );
+		}
 
-        private static readonly IDictionary<int, TAG_PREMIUM> m_fakePremiumCards = new Dictionary<int, TAG_PREMIUM>();
+		private static readonly IList<KeyValuePair<EntityBase, TAG_PREMIUM>> _fakePremiumCards = new List<KeyValuePair<EntityBase, TAG_PREMIUM>>( );
 
-        private static void RegisterFakePremiumCard([NotNull] EntityBase ent, TAG_PREMIUM tag)
-        {
-            var id = ent.GetEntityId();
-            if (!m_fakePremiumCards.ContainsKey(id))
-                m_fakePremiumCards.Add(id, tag);
-        }
+		private static void RegisterFakePremiumCard([NotNull] EntityBase ent, TAG_PREMIUM tag)
+		{
+			if (_fakePremiumCards.Select(p => p.Key.GetEntityId( )).Contains(ent.GetEntityId( )))
+			{
+				Logger.Message($"{ent} already added");
+			}
+			else
+			{
+				_fakePremiumCards.Add(new KeyValuePair<EntityBase, TAG_PREMIUM>(ent, tag));
+				Logger.Message($"{ent} added ({tag})");
+			}
+		}
 
-        private static bool TryGetFakePremium(int ent_id, out TAG_PREMIUM tag)
-        {
-            return m_fakePremiumCards.TryGetValue(ent_id, out tag);
-        }
+		public static void ResetFakePremiumData( )
+		{
+			_fakePremiumCards.Clear( );
+			Logger.Message("Cleared");
+		}
 
-        private static bool TryGetFakePremium([NotNull] EntityBase ent, out TAG_PREMIUM tag)
-        {
-            return TryGetFakePremium(ent.GetEntityId(), out tag);
-        }
+		private static void SetGoldenTag([NotNull] Ent ent, [NotNull] CallerInfo info)
+		{
+			if (!ent.ControlledByFriendlyPlayer /*CreatedByFriendlyPlayer*/( ))
+			{
+				//Logger.Message($"{__instance} not owned", info);
+				return;
+			}
 
-        public static void ResetFakePremiumData()
-        {
-            m_fakePremiumCards.Clear();
-        }
+			if (ent.GetPremiumType( ) != TAG_PREMIUM.NORMAL)
+				return;
 
-        private static void SetGoldenTag([NotNull] Ent ent, [NotNull] CallerInfo info)
-        {
-            if (!ent.ControlledByFriendlyPlayer())
-            {
-                //Logger.Message($"{__instance} not owned", info);
-                return;
-            }
+			var tag = ent.GetBestPossiblePremiumType( );
+			if (tag == TAG_PREMIUM.NORMAL)
+			{
+				Logger.Message($"{ent} have no golden material", info);
+				return;
+			}
 
-            if (ent.GetPremiumType() != TAG_PREMIUM.NORMAL)
-                return;
+			RegisterFakePremiumCard(ent, tag);
+			ent.SetTag(GAME_TAG.PREMIUM, tag);
+			//Logger.Message($"{ent} set to {tag}", info);
+		}
 
-            var tag = ent.GetBestPossiblePremiumType();
-            if (tag == TAG_PREMIUM.NORMAL)
-            {
-                Logger.Message($"{ent} have no golden material", info);
-                return;
-            }
+		[NotNull]
+		private static string ParseFlags([NotNull] TagMap map)
+		{
+			//var strings = pairs.Select(t => new {name = ((GAME_TAG) t.Key).ToString( ), value = t.Value}).OrderByDescending(t => t.name).Select(t => $"{t.name}: {t.value}");
+			//return string.Join(", ", strings);
+			return TagConvertor.ToString(map);
+		}
 
-            RegisterFakePremiumCard(ent, tag);
-            ent.SetTag(GAME_TAG.PREMIUM, tag);
-            Logger.Message($"{ent} set to {tag}", info);
-        }
+		[NotNull]
+		private static string ParseFlags([NotNull] EntityBase ent)
+		{
+			return ParseFlags(ent.GetTags( ));
+		}
 
-        [NotNull]
-        private static string JoinTags([NotNull] IEnumerable<KeyValuePair<int, int>> pairs)
-        {
-            var strings = pairs.Select(t => new { name = ((GAME_TAG)t.Key).ToString(), value = t.Value })
-                               .OrderByDescending(t => t.name)
-                               .Select(t => $"{t.name}: {t.value}");
-            return string.Join(", ", strings);
-        }
+		[NotNull]
+		private static string ParseFlags([NotNull] Net.Entity ent)
+		{
+			var tmap = new TagMap( );
+			var map = tmap.GetMap( );
+			foreach (var tag in ent.Tags)
+				map.Add(tag.Name, tag.Value);
+			return ParseFlags(tmap);
+		}
 
-        [NotNull]
-        private static string JoinTags([NotNull] EntityBase ent)
-        {
-            return JoinTags(ent.GetTags().GetMap());
-        }
+		[NotNull]
+		private static IEnumerable<EntityDef> GetAllEntityDefs( )
+		{
+			return DefLoader.Get( ).GetAllEntityDefs( ).Select(p => p.Value);
+		}
 
-        [NotNull]
-        private static string JoinTags([NotNull] Net.Entity ent)
-        {
-            return JoinTags(ent.Tags.Select(t => new KeyValuePair<int, int>(t.Name, t.Value)));
-        }
+		//NEVER UPDATE THE ACTOR!!!
+		//stolen cards ignored
+		//secrets with transformation ignored
+		private static bool SetHistoryGoldenTag([NotNull] Ent from, [NotNull] Net.Entity to, [NotNull] CallerInfo info)
+		{
+			if (UseRealGoldenTag( ))
+				return false;
 
-        [NotNull]
-        private static IEnumerable<EntityDef> GetAllEntityDefs()
-        {
-            return DefLoader.Get().GetAllEntityDefs().Select(p => p.Value);
-        }
+			var fromEntdef = from.GetEntityDef( );
+			var toEntdef = GetAllEntityDefs( ).First(e => e.GetCardId( ) == to.CardID);
 
-        private enum UPDATE_ACTOR
-        {
-            ORIGINAL, NO, YES
-        }
+			//const int FROM_TO_LAST = 1 << 0;
+			const int FROM_TO_DEFS = 1 << 1;
+			const int FROM_TO_FLAGS = 1 << 2;
 
-        private static UPDATE_ACTOR SetHistoryGoldenTag([NotNull] Ent from, [NotNull] Net.Entity to, [NotNull] CallerInfo info)
-        {
-            if (UseRealGoldenTag())
-                return UPDATE_ACTOR.ORIGINAL;
+			string PrintFromTo( /*int def = FROM_TO_LAST, int ex = 0*/ int bflags = 0)
+			{
+				var builder = new StringBuilder( );
 
-            const int GAME_TAG_PREMIUM = (int)GAME_TAG.PREMIUM;
+				//var bflags = def | ex;
+				//var played = (bflags & FROM_TO_LAST) > 0;
+				var defs = (bflags & FROM_TO_DEFS) > 0;
+				var flags = (bflags & FROM_TO_FLAGS) > 0;
 
-            void _Logger(string msg) => Logger.Message(msg, info);
+				//if (played)
+				//{
+				//	builder.Append($"---Played: {HistoryManager.LastPlayedEntity}\n");
+				//	builder.Append($"---Target: {HistoryManager.LastTargetedEntity}\n");
+				//}
 
-            var from_entdef = from.GetEntityDef();
-            var to_entdef = GetAllEntityDefs().First(e => e.GetCardId() == to.CardID);
+				if (defs)
+				{
+					builder.Append("---From def: ");
+					builder.AppendLine(fromEntdef.ToString( ));
+					if (flags)
+						builder.AppendLine(ParseFlags(fromEntdef));
+				}
 
-            const int FROM_TO_DEFS = 1 << 0;
-            const int FROM_TO_FLAGS = 1 << 1;
+				builder.Append("---From: ");
+				builder.AppendLine(from.ToString( ));
+				if (flags)
+					builder.AppendLine(ParseFlags(from));
+				if (defs)
+				{
+					builder.Append("---To def: ");
+					builder.AppendLine(toEntdef.ToString( ));
+					if (flags)
+						builder.AppendLine(ParseFlags(toEntdef));
+				}
 
-            string _PrintFromTo(int bflags = 0)
-            {
-                var builder = new StringBuilder();
+				builder.AppendLine($"---To: [{to}]");
+				if (flags)
+					builder.Append(ParseFlags(to));
 
-                var defs = (bflags & FROM_TO_DEFS) > 0;
-                var flags = (bflags & FROM_TO_FLAGS) > 0;
+				return builder.ToString( );
+			}
 
-                if (defs)
-                {
-                    builder.Append("From def: ");
-                    builder.AppendLine(from_entdef.ToString());
-                    if (flags)
-                        builder.AppendLine(JoinTags(from_entdef));
-                }
+			var premiumTag = to.Tags.FirstOrDefault(tag => tag.Name == (int) GAME_TAG.PREMIUM);
+			//target card can't be premium
+			if (premiumTag == default)
+			{
+				Logger.Message($"Premium tag not found\n{PrintFromTo( )}", info);
+				return false;
+			}
 
-                builder.Append("From: ");
-                builder.AppendLine(from.ToString());
-                if (flags)
-                    builder.AppendLine(JoinTags(from));
-                if (defs)
-                {
-                    builder.Append("To def: ");
-                    builder.AppendLine(to_entdef.ToString());
-                    if (flags)
-                        builder.AppendLine(JoinTags(to_entdef));
-                }
+			Logger.Message($"Updating\n{PrintFromTo(FROM_TO_FLAGS | FROM_TO_FLAGS)}", info);
 
-                builder.AppendLine($"To: [{to}]");
-                if (flags)
-                    builder.Append(JoinTags(to));
+			string MakeSubstr(string str)
+			{
+				var offset = str.LastIndexOf('_');
+				if (offset == -1)
+					return "-";
 
-                return builder.ToString();
-            }
+				return str.Substring(0, offset + 1);
+			}
 
-            // ReSharper disable once InlineOutVariableDeclaration
-            TAG_PREMIUM tag_before, tag_after;
+			var fromId = from.GetEntityId( );
+			var toId = to.ID;
+			var fromName = MakeSubstr(from.GetCardId( ));
+			var toName = MakeSubstr(to.CardID);
 
-            if (from.GetCardId() == HistoryManager.LastTargetedEntity?.GetCardId())
-            {
-                if (!TryGetFakePremium(HistoryManager.LastPlayedEntity, out tag_before))
-                    tag_before = default;
-            }
-            else if (!TryGetFakePremium(from, out tag_before))
-            {
-                Logger.Message($"Last played: {HistoryManager.LastPlayedEntity}\n"
-                             + $"Last target: {HistoryManager.LastTargetedEntity}\n"
-                             + "Fake premium type not set before\n"
-                             + $"{_PrintFromTo(FROM_TO_DEFS)}", info);
-                return UPDATE_ACTOR.ORIGINAL;
-            }
+			Logger.Message($"Testing\n{nameof(fromId)}: {fromId}\n{nameof(fromName)}: {from.GetCardId( )}|{fromName}\n{nameof(toId)}: {toId}\n{nameof(toName)}: {to.CardID}|{toName}"
+						 , info);
 
-            if (from.GetEntityId() == to.ID || !TryGetFakePremium(to.ID, out tag_after))
-                tag_after = to_entdef.GetBestPossiblePremiumType(_Logger);
+			var index = -1;
+			bool exact = default;
 
-            TAG_PREMIUM ideal_tag;
-            UPDATE_ACTOR result;
-            if (tag_before < tag_after)
-            {
-                ideal_tag = tag_before;
-                result = UPDATE_ACTOR.NO;
-            }
-            else if (tag_before == tag_after)
-            {
-                if (tag_before == default)
-                {
-                    Logger.Message($"Premium type stay default\n{_PrintFromTo()}", info);
-                    return UPDATE_ACTOR.NO;
-                }
+			for (var i = _fakePremiumCards.Count - 1; i >= 0; --i)
+			{
+				var ent = _fakePremiumCards[i].Key;
+				var id = ent.GetEntityId( );
+				var name = ent.GetCardId( );
+				Logger.Message($"Id: {id} Name: {name}", info);
 
-                ideal_tag = tag_before;
-                result = UPDATE_ACTOR.NO;
-            }
-            else
-            {
-                //diamond -> golden use same (animated) actor
-                ideal_tag = tag_after;
-                result = tag_after == default ? UPDATE_ACTOR.YES : UPDATE_ACTOR.NO;
-            }
+				if (id == fromId || id == toId)
+				{
+					exact = true;
+				}
+				else if (name.StartsWith(fromName) || name.StartsWith(toName))
+				{
+					exact = false;
+				}
+				else
+				{
+					continue;
+				}
 
-            foreach (var tag in to.Tags.Where(tag => tag.Name == GAME_TAG_PREMIUM))
-            {
-                //force premium tag changed before
-                Logger.Message($"Tag found. {(TAG_PREMIUM)tag.Value} -> {ideal_tag}\n{_PrintFromTo(FROM_TO_FLAGS)}", info);
-                tag.Value = (int)ideal_tag;
-                return result;
-            }
+				index = i;
+				break;
+			}
 
-            Logger.Message($"Tag added. {ideal_tag}\n{_PrintFromTo(FROM_TO_FLAGS)}", info);
-            to.Tags.Add(new Net.Entity.Tag { Name = GAME_TAG_PREMIUM, Value = (int)ideal_tag });
-            return result;
-        }
-    }
+			if (index == -1)
+			{
+				Logger.Message("Not found!");
+				return false;
+			}
 
-    public partial class Entity
-    {
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ent.OnFullEntity))]
-        public static void OnFullEntity([NotNull] Ent __instance)
-        {
-            if (UseRealGoldenTag()) return;
+			if (!exact)
+			{
+				if (!from.ControlledByFriendlyPlayer( ))
+				{
+					//todo: do something to detect who change the card
+					//now if opponent have same card it also becomes golden
+				}
+			}
 
-            //golden cards while game starts
-            SetGoldenTag(__instance, new CallerInfoMin());
-        }
+			var value = _fakePremiumCards[index].Value;
+			Logger.Message($"Updating successful.{(exact ? " exact" : string.Empty)} {value} tag selected", info);
+			premiumTag.Value = (int) value;
 
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ent.OnShowEntity))]
-        public static void OnShowEntity([NotNull] Ent __instance)
-        {
-            if (UseRealGoldenTag()) return;
+			return true;
+		}
+	}
 
-            //golden card when it taken from the deck, played by enemy, etc...
-            SetGoldenTag(__instance, new CallerInfoMin());
-        }
+	public partial class Entity
+	{
+		[HarmonyPostfix]
+		[HarmonyPatch(nameof(Ent.OnFullEntity))]
+		public static void OnFullEntity([NotNull] Ent __instance)
+		{
+			if (UseRealGoldenTag( ))
+				return;
 
-        // ReSharper disable InconsistentNaming
-        private static readonly MethodInfo ShouldUpdateActorOnChangeEntity = AccessTools.Method(typeof(Ent), nameof(ShouldUpdateActorOnChangeEntity));
-        private static readonly MethodInfo ShouldRestartStateSpellsOnChangeEntity = AccessTools.Method(typeof(Ent), nameof(ShouldRestartStateSpellsOnChangeEntity));
-        private static readonly MethodInfo HandleEntityChange = AccessTools.Method(typeof(Ent), nameof(HandleEntityChange));
-        // ReSharper restore InconsistentNaming
+			//golden cards while game starts
+			SetGoldenTag(__instance, new CallerInfoMin( ));
+		}
 
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(Ent.OnChangeEntity))]
-        public static bool OnChangeEntity([NotNull] Ent __instance,
-                                          [NotNull] Net.HistChangeEntity changeEntity,
-                                          [NotNull] List<Net.HistChangeEntity> ___m_transformPowersProcessed,
-                                          [NotNull] List<int> ___m_subCardIDs,
-                                          ref int ___m_queuedChangeEntityCount)
-        {
-            if (___m_transformPowersProcessed.Contains(changeEntity))
-            {
-                ___m_transformPowersProcessed.Remove(changeEntity);
-            }
-            else
-            {
-                var update_actor = SetHistoryGoldenTag(__instance, changeEntity.Entity, new CallerInfoMin());
+		[HarmonyPostfix]
+		[HarmonyPatch(nameof(Ent.OnShowEntity))]
+		public static void OnShowEntity([NotNull] Ent __instance)
+		{
+			if (UseRealGoldenTag( ))
+				return;
 
-                bool _UpdateActor()
-                {
-                    switch (update_actor)
-                    {
-                        case UPDATE_ACTOR.ORIGINAL:
-                            return (bool)ShouldUpdateActorOnChangeEntity.Invoke(__instance, new object[] { changeEntity });
-                        case UPDATE_ACTOR.NO:
-                            return false;
-                        case UPDATE_ACTOR.YES:
-                            return true;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                }
+			//golden card when it taken from the deck, played by enemy, etc...
+			SetGoldenTag(__instance, new CallerInfoMin( ));
+		}
 
-                ___m_subCardIDs.Clear();
-                --___m_queuedChangeEntityCount;
-                var data = new Ent.LoadCardData
-                {
-                    updateActor = _UpdateActor()
-                  , restartStateSpells = (bool)ShouldRestartStateSpellsOnChangeEntity.Invoke(__instance, new object[] { changeEntity })
-                  , fromChangeEntity = true
-                };
+		// ReSharper disable InconsistentNaming
+		private static readonly MethodInfo ShouldUpdateActorOnChangeEntity = AccessTools.Method(typeof(Ent), nameof(ShouldUpdateActorOnChangeEntity));
+		private static readonly MethodInfo ShouldRestartStateSpellsOnChangeEntity = AccessTools.Method(typeof(Ent), nameof(ShouldRestartStateSpellsOnChangeEntity));
 
-                HandleEntityChange.Invoke(__instance, new object[] { changeEntity.Entity, data, false });
-            }
+		private static readonly MethodInfo HandleEntityChange = AccessTools.Method(typeof(Ent), nameof(HandleEntityChange));
+		// ReSharper restore InconsistentNaming
 
-            return false;
-        }
-    }
+		[HarmonyPrefix]
+		[HarmonyPatch(nameof(Ent.OnChangeEntity))]
+		public static bool OnChangeEntity([NotNull] Ent __instance,
+										  [NotNull] Net.HistChangeEntity changeEntity,
+										  [NotNull] List<Net.HistChangeEntity> ___m_transformPowersProcessed,
+										  [NotNull] List<int> ___m_subCardIDs,
+										  ref int ___m_queuedChangeEntityCount)
+		{
+			if (___m_transformPowersProcessed.Contains(changeEntity))
+			{
+				___m_transformPowersProcessed.Remove(changeEntity);
+			}
+			else
+			{
+				var dontUpdateActor = SetHistoryGoldenTag(__instance, changeEntity.Entity, new CallerInfoMin( ));
 
-    public partial class Entity
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(Ent.GetCardTextBuilder))]
-        public static bool GetCardTextBuilder(ref CardTextBuilder __result, [NotNull] Ent __instance)
-        {
-            //remove shit from logs
+				bool UpdateActorFn( )
+				{
+					if (dontUpdateActor)
+						return false;
+					return (bool) ShouldUpdateActorOnChangeEntity.Invoke(__instance, new object[ ] {changeEntity});
+				}
 
-            CardTextBuilder _GetResult()
-            {
-                var end_def = __instance.GetEntityDef();
-                if (end_def != null)
-                {
-                    var builder = end_def.GetCardTextBuilder();
-                    if (builder != null) return builder;
-                }
+				___m_subCardIDs.Clear( );
+				--___m_queuedChangeEntityCount;
+				var data = new Ent.LoadCardData
+				{
+					updateActor = UpdateActorFn( )
+				  , restartStateSpells = (bool) ShouldRestartStateSpellsOnChangeEntity.Invoke(__instance, new object[ ] {changeEntity})
+				  , fromChangeEntity = true
+				};
 
-                return CardTextBuilder.GetFallbackCardTextBuilder();
-            }
+				HandleEntityChange.Invoke(__instance, new object[ ] {changeEntity.Entity, data, false});
+			}
 
-            __result = _GetResult();
-            return false;
-        }
-    }
+			return false;
+		}
+	}
+
+	public partial class Entity
+	{
+		[HarmonyPrefix]
+		[HarmonyPatch(nameof(Ent.GetCardTextBuilder))]
+		public static bool GetCardTextBuilder(ref CardTextBuilder __result, [NotNull] Ent __instance)
+		{
+			//remove shit from logs
+
+			var entDef = __instance.GetEntityDef( );
+			var builder = entDef?.GetCardTextBuilder( );
+			__result = builder ?? CardTextBuilder.GetFallbackCardTextBuilder( );
+
+			return false;
+		}
+	}
 }

@@ -59,16 +59,14 @@
     <Compile Include="Targets\Entity.cs" />
     <Compile Include="Targets\ExceptionReporterControl.cs" />
     <Compile Include="Targets\Gameplay.cs" />
-    <Compile Include="Targets\HistoryManager.cs" />
-    <Compile Include="Targets\LettuceMercenary.cs" />
+    <Compile Include="Targets\InactivePlayerKicker.cs" />
     <Compile Include="Targets\MatchingQueueTab.cs" />
     <Compile Include="Targets\Network.cs" />
-    <Compile Include="Targets\ReconnectHelperDialog.cs" />
+    <Compile Include="Targets\ReconnectMgr.cs" />
     <Compile Include="Targets\RewardTrackSkinChoiceConfirmation.cs" />
     <Compile Include="Targets\SceneDebugger.cs" />
     <Compile Include="Targets\TB_BaconShop.cs" />
     <None Include="packages.config" />
-    <None Include="Targets\UnityTime.cs" />
     <Compile Include="Utils\CardInfo.cs" />
     <Compile Include="Utils\Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -82,8 +80,8 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="0Harmony, Version=2.8.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\HarmonyX.2.8.0\lib\net45\0Harmony.dll</HintPath>
+    <Reference Include="0Harmony, Version=2.9.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\HarmonyX.2.9.0\lib\net45\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -181,11 +179,11 @@
       <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Mono.Security.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="MonoMod.RuntimeDetour, Version=22.1.4.3, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\MonoMod.RuntimeDetour.22.1.4.3\lib\net452\MonoMod.RuntimeDetour.dll</HintPath>
+    <Reference Include="MonoMod.RuntimeDetour, Version=22.2.10.1, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\MonoMod.RuntimeDetour.22.2.10.1\lib\net452\MonoMod.RuntimeDetour.dll</HintPath>
     </Reference>
-    <Reference Include="MonoMod.Utils, Version=22.1.4.3, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\MonoMod.Utils.22.1.4.3\lib\net452\MonoMod.Utils.dll</HintPath>
+    <Reference Include="MonoMod.Utils, Version=22.2.10.1, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\MonoMod.Utils.22.2.10.1\lib\net452\MonoMod.Utils.dll</HintPath>
     </Reference>
     <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

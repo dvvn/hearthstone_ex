@@ -5,48 +5,43 @@ using Control = Hearthstone.ExceptionReporterControl;
 
 namespace hearthstone_ex.Targets
 {
-    [HarmonyPatch(typeof(Control))]
-    public class ExceptionReporterControl : LoggerFile.Static<Control>
-    {
-        //prevent sending logs to the server 
+	[HarmonyPatch(typeof(Control))]
+	public class ExceptionReporterControl : LoggerFile.Static<Control>
+	{
+		//prevent sending logs to the server 
 
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Control.ExceptionReportInitialize))]
-        public static void ExceptionReportInitialize()
-        {
-            var reporter = ExceptionReporter.Get();
+		[HarmonyPostfix]
+		[HarmonyPatch(nameof(Control.ExceptionReportInitialize))]
+		public static void ExceptionReportInitialize( )
+		{
+			var reporter = ExceptionReporter.Get( );
 
-            if (reporter.IsInDebugMode)
-                Logger.Message($"{reporter} already in debug mode");
-            else
-            {
-                Logger.Message($"{reporter} isn't in debug mode, forcing...");
-                reporter.IsInDebugMode = true;
-            }
+			bool LogValue(string name, bool value, bool targetValue)
+			{
+				Logger.Message(value == targetValue
+								   ? $"{reporter}.{name} is already {value}"
+								   : $"{reporter}.{name} forced to {targetValue}");
 
-            if (reporter.ReportOnTheFly)
-            {
-                reporter.ReportOnTheFly = false;
-                Logger.Message($"{reporter}.{nameof(reporter.ReportOnTheFly)} forced to {reporter.ReportOnTheFly}");
-            }
+				return targetValue;
+			}
 
-            if (reporter.SendExceptions == false)
-            {
-                reporter.SendExceptions = true;
-                Logger.Message($"{reporter}.{nameof(reporter.SendExceptions)} forced to {reporter.SendExceptions}");
-            }
+			const bool SEND_REPORTS =
+#if DEBUG
+					true
+#else
+					false
+#endif
+				;
 
-            if (reporter.SendAsserts == false)
-            {
-                reporter.SendAsserts = true;
-                Logger.Message($"{reporter}.{nameof(reporter.SendAsserts)} forced to {reporter.SendAsserts}");
-            }
+			//disable old records deserializing
+			reporter.IsInDebugMode = LogValue(nameof(reporter.IsInDebugMode), reporter.IsInDebugMode, true);
+			//dont make zips
+			reporter.ReportOnTheFly = LogValue(nameof(reporter.ReportOnTheFly), reporter.ReportOnTheFly, true);
 
-            if (reporter.SendErrors == false)
-            {
-                reporter.SendErrors = true;
-                Logger.Message($"{reporter}.{nameof(reporter.SendErrors)} forced to {reporter.SendErrors}");
-            }
-        }
-    }
+			reporter.SendExceptions = LogValue(nameof(reporter.SendExceptions), reporter.SendExceptions, SEND_REPORTS);
+			reporter.SendAsserts = LogValue(nameof(reporter.SendAsserts), reporter.SendAsserts, SEND_REPORTS);
+			reporter.SendErrors = LogValue(nameof(reporter.SendErrors), reporter.SendErrors, SEND_REPORTS);
+			reporter.IsFakeReport = LogValue(nameof(reporter.IsFakeReport), reporter.IsFakeReport, SEND_REPORTS == false);
+		}
+	}
 }

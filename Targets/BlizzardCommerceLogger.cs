@@ -4,16 +4,16 @@ using logger = Hearthstone.Commerce.BlizzardCommerceLogger;
 
 namespace hearthstone_ex.Targets
 {
-    [HarmonyPatch(typeof(logger))]
-    public class BlizzardCommerceLogger
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(logger.OnLogEvent))]
-        public static bool OnLogEvent(CommerceLogLevel logLevel, string message)
-        {
-            //i dont want shit in logs
+	[HarmonyPatch(typeof(logger))]
+	public class BlizzardCommerceLogger
+	{
+		[HarmonyPrefix]
+		[HarmonyPatch(nameof(logger.OnLogEvent))]
+		public static bool OnLogEvent(CommerceLogLevel logLevel, string message)
+		{
+			//i dont want shit in logs
 
-            return logLevel == CommerceLogLevel.ERROR || logLevel == CommerceLogLevel.FATAL;
+			return logLevel == CommerceLogLevel.ERROR || logLevel == CommerceLogLevel.FATAL;
 
 #if false
             switch (level)
@@ -26,6 +26,6 @@ namespace hearthstone_ex.Targets
                     return false;
             }
 #endif
-        }
-    }
+		}
+	}
 }

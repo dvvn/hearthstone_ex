@@ -4,9 +4,9 @@ using Button = EndTurnButton;
 
 namespace hearthstone_ex.Targets
 {
-    [HarmonyPatch(typeof(Button))]
-    public class EndTurnButton : LoggerGui.Static<EndTurnButton>
-    {
+	[HarmonyPatch(typeof(Button))]
+	public class EndTurnButton : LoggerGui.Static<EndTurnButton>
+	{
 #if false
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SetStateToYourTurn))]
@@ -33,12 +33,12 @@ namespace hearthstone_ex.Targets
             __instance.StartCoroutine(DoFlash());
         }
 #endif
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(SetStateToNoMorePlays))]
-        public static void SetStateToNoMorePlays()
-        {
-            Logger.Message("End of turn detected");
-            InputManager.Get().DoEndTurnButton();
-        }
-    }
+		[HarmonyPostfix]
+		[HarmonyPatch(nameof(SetStateToNoMorePlays))]
+		public static void SetStateToNoMorePlays( )
+		{
+			Logger.Message("End of the turn detected");
+			InputManager.Get( ).DoEndTurnButton( );
+		}
+	}
 }
