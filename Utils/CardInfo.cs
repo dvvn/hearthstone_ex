@@ -65,10 +65,11 @@ namespace hearthstone_ex.Utils
 			return ent.GetCard( ).HavePremiumTexture( );
 		}
 
-		private static TAG_PREMIUM SelectBestPremiumType([NotNull] this EntityBase ent, bool havePremiumTexture)
+		public static TAG_PREMIUM SelectBestPremiumType([NotNull] this EntityBase ent, bool havePremiumTexture)
 		{
-			return havePremiumTexture == false ? TAG_PREMIUM.NORMAL :
-				   ent.HasTag(GAME_TAG.HAS_DIAMOND_QUALITY) ? TAG_PREMIUM.DIAMOND : TAG_PREMIUM.GOLDEN;
+			return havePremiumTexture == false
+					   ? TAG_PREMIUM.NORMAL
+					   : ent.HasTag(GAME_TAG.HAS_DIAMOND_QUALITY) ? TAG_PREMIUM.DIAMOND : TAG_PREMIUM.GOLDEN;
 		}
 
 		public static TAG_PREMIUM GetBestPossiblePremiumType([NotNull] this EntityBase ent, [CanBeNull] Action<string> logger = null)
@@ -87,6 +88,14 @@ namespace hearthstone_ex.Utils
 			return ent.GetCreatorId( ) == GameState.Get( ).GetFriendlySidePlayer( ).GetPlayerId( );
 		}
 
+		public static bool ControlledByFriendlyPlayer([NotNull] this Network.Entity ent)
+		{
+			//FAKE_CONTROLLER?
+
+			var controller = ent.Tags.FirstOrDefault(p => p.Name == (int) GAME_TAG.CONTROLLER);
+			return controller != default && controller.Value == GameState.Get( ).GetFriendlySidePlayer( ).GetPlayerId( );
+		}
+
 		public static bool ControlledByFriendlyPlayer([NotNull] this EntityBase ent)
 		{
 			return ent.GetControllerId( ) == GameState.Get( ).GetFriendlySidePlayer( ).GetPlayerId( );
@@ -103,10 +112,10 @@ namespace hearthstone_ex.Utils
 			//TAG_XXXXX
 			public Type Tag;
 
-			public override string ToString( )
-			{
-				return $"{Key}: {Tag}";
-			}
+			//public override string ToString( )
+			//{
+			//	return $"{Key}: {Tag}";
+			//}
 		}
 
 		private static IReadOnlyDictionary<int, TagInfo> FillAllTags( )
@@ -134,25 +143,19 @@ namespace hearthstone_ex.Utils
 
 		private static readonly IReadOnlyDictionary<int, TagInfo> _allTags = FillAllTags( );
 
-		public static string ToString(this TagMap tags)
+		public static string MakeString(this TagMap tags)
 		{
-			var builder = new StringBuilder( );
-
-			foreach (var item in tags.GetMap( ).OrderBy(p => p.Key))
+			var infoDef = new TagInfo( );
+			return string.Join(Environment.NewLine, tags.GetMap( ).Select(item =>
 			{
-				if (builder.Length > 0)
-					builder.Append(", ");
-
 				if (!_allTags.TryGetValue(item.Key, out var info))
-					info = new TagInfo( );
+					info = infoDef;
 
 				var keyStr = info.Key ?? item.Key.ToString( );
 				var tagStr = info.Tag == null ? item.Value.ToString( ) : Enum.GetName(info.Tag, item.Value);
 
-				builder.Append($"{keyStr}: {tagStr}");
-			}
-
-			return builder.ToString( );
+				return new {Key = keyStr, Tag = tagStr};
+			}).OrderBy(p => p.Key).Select(p => $"{p.Key}: {p.Tag}"));
 		}
 	}
 }

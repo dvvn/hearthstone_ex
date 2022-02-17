@@ -12,38 +12,39 @@ namespace hearthstone_ex.Targets
 	public partial class AchievementManager : LoggerGui.Static<AchievementManager>
 	{
 		[Conditional("DEBUG")]
-		private static void LogAchievementName(int id, [NotNull] CallerInfo info)
+		private static void LogAchievementName(int id)
 		{
 			string Msg( )
 			{
 				var record = GameDbf.Achievement.GetRecord(id);
 				if (record == null)
 					return "not found!";
-				var record_name = record.Name.GetString( );
-				return string.IsNullOrEmpty(record_name) ? "have incorrect name!" : $"and name \"{record_name}\" detected.";
+				var recordName = record.Name.GetString( );
+				return string.IsNullOrEmpty(recordName) ? "have incorrect name!" : $"and name \"{recordName}\" detected.";
 			}
 
-			Logger.Message($"Achievement with record id \"{id}\" {Msg( )}", info);
+			Logger.Message($"Achievement with record id \"{id}\" " + Msg( ));
 		}
 
-		public static void Claim(Manager mgr, int id, CallerInfo info)
+		public static void Claim(Manager mgr, int id)
 		{
 			try
 			{
 				mgr.AckAchievement(id);
-				if (!mgr.ClaimAchievementReward(id)) return; //probably claimed already
+				if (!mgr.ClaimAchievementReward(id))
+					return; //probably claimed already
 
-				LogAchievementName(id, info);
-				Logger.Message("Achievement successfully claimed!", info);
+				LogAchievementName(id);
+				Logger.Message("Achievement successfully claimed!");
 			}
 			catch (Exception e)
 			{
-				LogAchievementName(id, info);
-				Logger.Message($"Unable to claim achievement: ---- {e} ----", info);
+				LogAchievementName(id);
+				Logger.Message($"Unable to claim achievement: ---- {e} ----");
 			}
 		}
 
-		public static void Claim(int id, CallerInfo info) => Claim(Manager.Get( ), id, info);
+		public static void Claim(int id) => Claim(Manager.Get( ), id);
 	}
 
 	[HarmonyPatch(typeof(Manager))]
@@ -58,8 +59,7 @@ namespace hearthstone_ex.Targets
 			var ids = CompleteAchievements?.AchievementIds;
 			if (ids == null || ids.Count == 0)
 				return;
-			var debug_info = new CallerInfoMin( );
-			CompleteAchievements.AchievementIds.ForEach(id => Claim(__instance, id, debug_info));
+			CompleteAchievements.AchievementIds.ForEach(id => Claim(__instance, id));
 		}
 
 		[HarmonyPostfix]
@@ -75,7 +75,7 @@ namespace hearthstone_ex.Targets
 			if (newStatus != Status.COMPLETED)
 				return;
 
-			Claim(__instance, id, new CallerInfoMin( ));
+			Claim(__instance, id);
 		}
 	}
 }

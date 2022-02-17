@@ -24,9 +24,9 @@ namespace hearthstone_ex.Targets
 				return;
 
 			var logger = new Action<string>(msg => Logger.Message(msg, nameof(CollectionManager)));
-			var new_premium = ent.GetBestPossiblePremiumType(logger);
-			logger($"{ent}: premium tag changed from {premium} to {new_premium} ({TagConvertor.ToString(ent.GetTags( ))})");
-			premium = new_premium;
+			var newPremium = ent.GetBestPossiblePremiumType(logger);
+			logger($"{ent}: premium tag changed from {premium} to {newPremium}\n" + TagConvertor.MakeString(ent.GetTags( )));
+			premium = newPremium;
 		}
 	}
 }

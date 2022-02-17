@@ -37,17 +37,15 @@ namespace hearthstone_ex.Targets
 		private sealed class ServiceRegistrar
 		{
 			private readonly ServiceLocator _locator;
-			private readonly CallerInfo _infoFull;
 
 			private readonly Func<Type, bool, IService> _getFn;
 
-			public ServiceRegistrar([NotNull] ServiceLocator locator, CallerInfo callerInfoFull)
+			public ServiceRegistrar([NotNull] ServiceLocator locator)
 			{
 				_locator = locator;
-				_infoFull = callerInfoFull;
 
-				var fn_info = AccessTools.Method(locator.GetType( ), "Get", new[ ] {typeof(Type), typeof(bool)});
-				_getFn = AccessTools.MethodDelegate<Func<Type, bool, IService>>(fn_info, locator, fn_info.IsVirtual);
+				var fnInfo = AccessTools.Method(locator.GetType( ), "Get", new[ ] {typeof(Type), typeof(bool)});
+				_getFn = AccessTools.MethodDelegate<Func<Type, bool, IService>>(fnInfo, locator, fnInfo.IsVirtual);
 			}
 
 			[CanBeNull]
@@ -56,9 +54,9 @@ namespace hearthstone_ex.Targets
 				var type = typeof(T);
 				var result = _getFn(type, true);
 				if (result == null)
-					Logger.Message($"{type.Name} service not found!", _infoFull);
+					Logger.Message($"{type.Name} service not found!");
 				else if (extraInfo)
-					Logger.Message($"{type.Name} service already exists!", _infoFull);
+					Logger.Message($"{type.Name} service already exists!");
 				return (T) result;
 			}
 
@@ -67,7 +65,7 @@ namespace hearthstone_ex.Targets
 			{
 				var result = new T( );
 				_locator.RegisterService<T>(result);
-				Logger.Message($"{typeof(T).Name} service added!", _infoFull);
+				Logger.Message($"{typeof(T).Name} service added!");
 				return result;
 			}
 
@@ -86,7 +84,7 @@ namespace hearthstone_ex.Targets
 		[HarmonyPatch(nameof(InstantiateServiceLocator))]
 		public static void InstantiateServiceLocator([NotNull] ref ServiceLocator ___s_runtimeServices)
 		{
-			var reg = new ServiceRegistrar(___s_runtimeServices, new CallerInfo( ));
+			var reg = new ServiceRegistrar(___s_runtimeServices);
 
 			LoggerGui.SetDefaultWindow(reg.GetOrCreate<Debugger>( ));
 			Logger.Message($"{nameof(LoggerGui)}.{nameof(LoggerGui.DefaultWindow)} initialized!");

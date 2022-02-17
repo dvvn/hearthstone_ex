@@ -52,9 +52,9 @@ namespace hearthstone_ex.Utils
 	{
 		public readonly string MemberName;
 		public readonly string SourceFilePath;
-		public readonly int? SourceLineNumber;
+		public readonly int SourceLineNumber;
 
-		public CallerInfo([CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int? sourceLineNumber = 0)
+		public CallerInfo([CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			MemberName = memberName;
 			SourceFilePath = sourceFilePath;
@@ -65,7 +65,7 @@ namespace hearthstone_ex.Utils
 	public class CallerInfoMin : CallerInfo
 	{
 		public CallerInfoMin([CallerMemberName] string memberName = "")
-			: base(memberName, null, null)
+			: base(memberName, null, 0)
 		{
 		}
 	}
@@ -81,8 +81,8 @@ namespace hearthstone_ex.Utils
 			var buffer = new StringBuilder( );
 
 			buffer.AppendBrackets(rootPrefix);
-			var type_name = fullTypeName ? type.FullName : type.Name;
-			buffer.AppendBrackets(type_name);
+			var typeName = fullTypeName ? type.FullName : type.Name;
+			buffer.AppendBrackets(typeName);
 			foreach (var str in extra)
 			{
 				buffer.Append(' ');
@@ -93,13 +93,13 @@ namespace hearthstone_ex.Utils
 		}
 
 		[NotNull]
-		protected string PrepareMessage([CanBeNull] string memberName, string sourceFilePath, int? sourceLineNumber, object message)
+		protected string PrepareMessage([CanBeNull] string memberName, string sourceFilePath, int sourceLineNumber, object message)
 		{
 			var buffer = new StringBuilder(_prefix);
 
 			if (!string.IsNullOrEmpty(memberName) /*&& !member_name.StartsWith(".", StringComparison.OrdinalIgnoreCase)*/)
 			{
-				if (!sourceLineNumber.HasValue || sourceLineNumber <= 0)
+				if (sourceLineNumber <= 0)
 					buffer.AppendBrackets(memberName);
 				else
 					buffer.AppendBrackets(memberName, ' ', "-", ' ', sourceLineNumber);
@@ -115,31 +115,37 @@ namespace hearthstone_ex.Utils
 		protected abstract void WarningImpl(object msg);
 		protected abstract void MessageImpl(object msg);
 
-		public void Error(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int? sourceLineNumber = 0)
+		public void Error(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var msg = PrepareMessage(memberName, sourceFilePath, sourceLineNumber, message);
 			ErrorImpl(msg);
 		}
 
-		public void Warning(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int? sourceLineNumber = 0)
+		public void Warning(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var msg = PrepareMessage(memberName, sourceFilePath, sourceLineNumber, message);
 			WarningImpl(msg);
 		}
 
 		[Conditional("DEBUG")]
-		public void Message(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int? sourceLineNumber = 0)
+		public void Message(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var msg = PrepareMessage(memberName, sourceFilePath, sourceLineNumber, message);
 			MessageImpl(msg);
 		}
 
+		[Obsolete]
 		public void Error(object message, [NotNull] CallerInfo info) => Error(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
 
+		[Obsolete]
 		public void Warning(object message, [NotNull] CallerInfo info) => Warning(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
 
+		[Obsolete]
 		[Conditional("DEBUG")]
 		public void Message(object message, [NotNull] CallerInfo info) => Message(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
+
+		[Conditional("DEBUG")]
+		public void Message(object message, string memberName, int sourceLineNumber) => Message(message, memberName, "", sourceLineNumber);
 	}
 
 	public class LoggerFile : LoggerBase

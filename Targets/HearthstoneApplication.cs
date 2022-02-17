@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using HarmonyLib;
@@ -16,8 +15,7 @@ namespace hearthstone_ex.Targets
 		[NotNull]
 		private static string GetFrameworkVersion( )
 		{
-			using (var ndpKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32).
-											OpenSubKey(@"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\"))
+			using (var ndpKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32).OpenSubKey(@"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\"))
 			{
 				if (ndpKey?.GetValue("Release") != null)
 				{
@@ -54,8 +52,7 @@ namespace hearthstone_ex.Targets
 						var versionNames = installedVersions.GetSubKeyNames( );
 
 						//version names start with 'v', eg, 'v3.5' which needs to be trimmed off before conversion
-						var framework = Convert.ToDouble(versionNames[versionNames.Length - 1].
-															 Remove(0, 1), CultureInfo.InvariantCulture);
+						var framework = Convert.ToDouble(versionNames[versionNames.Length - 1].Remove(0, 1), CultureInfo.InvariantCulture);
 						var key = installedVersions.OpenSubKey(versionNames[versionNames.Length - 1]);
 						if (key != null)
 						{
@@ -71,22 +68,15 @@ namespace hearthstone_ex.Targets
 			throw new MissingMethodException($"{nameof(GetFrameworkVersion)}: unable to get version");
 		}
 
-		[Conditional("DEBUG")]
-		private static void LogFrameworkVersion([NotNull] CallerInfo info)
-		{
-			Logger.Message(RuntimeInformation.FrameworkDescription, info);
-			Logger.Message($"Framework: {GetFrameworkVersion( )}", info);
-			Logger.Message($"CLR: {Environment.Version}", info);
-		}
-
 		[HarmonyPostfix]
 		[HarmonyPatch(nameof(RunStartup))]
 		public static void RunStartup([NotNull] App __instance)
 		{
 			Loader.OnGameStartup(__instance);
-			var debug_info = new CallerInfoMin( );
-			Logger.Message("Started!", debug_info);
-			LogFrameworkVersion(debug_info);
+			Logger.Message("Started!", sourceLineNumber: 0);
+			Logger.Message(RuntimeInformation.FrameworkDescription, sourceLineNumber: 0);
+			Logger.Message($"Framework: {GetFrameworkVersion( )}", sourceLineNumber: 0);
+			Logger.Message($"CLR: {Environment.Version}", sourceLineNumber: 0);
 		}
 
 		private static ApplicationMode? _applicationModeOwerriden;

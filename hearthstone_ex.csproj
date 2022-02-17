@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="Loader.cs" />
     <Compile Include="Targets\BlizzardCommerceLogger.cs" />
+    <Compile Include="Targets\HistoryManager.cs" />
     <Compile Include="Targets\CollectionCardActors.cs" />
     <Compile Include="Targets\DeckTrayDeckTileVisual.cs" />
     <Compile Include="Targets\DialogManager.cs" />
@@ -59,6 +60,7 @@
     <Compile Include="Targets\Entity.cs" />
     <Compile Include="Targets\ExceptionReporterControl.cs" />
     <Compile Include="Targets\Gameplay.cs" />
+    <Compile Include="Targets\HistoryInfo.cs" />
     <Compile Include="Targets\InactivePlayerKicker.cs" />
     <Compile Include="Targets\MatchingQueueTab.cs" />
     <Compile Include="Targets\Network.cs" />

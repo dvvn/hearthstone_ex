@@ -16,7 +16,7 @@ namespace hearthstone_ex.Targets
 	public partial class DeckTrayDeckTileVisual : LoggerGui.Static<DeckTrayDeckTileVisual>
 	{
 		[Conditional("DEBUG")]
-		private static void LogMessage([CanBeNull] Actor actor, string msg, [NotNull] CallerInfo info_full)
+		private static void LogMessage([CanBeNull] Actor actor, string msg)
 		{
 			string GetName( )
 			{
@@ -30,15 +30,15 @@ namespace hearthstone_ex.Targets
 				return "UNKNOWN ENTITY";
 			}
 
-			Logger.Message($"{GetName( )}: {msg}", info_full);
+			Logger.Message($"{GetName( )}: {msg}");
 		}
 
 		[Conditional("DEBUG")]
-		private static void LogGhostedState([NotNull] Actor actor, GhostedState state, CallerInfo info_full)
+		private static void LogGhostedState([NotNull] Actor actor, GhostedState state)
 		{
 			if (state == GhostedState.NONE)
 				return;
-			LogMessage(actor, $"Ghost state set to {state}", info_full);
+			LogMessage(actor, $"Ghost state set to {state}");
 		}
 	}
 
@@ -126,62 +126,62 @@ namespace hearthstone_ex.Targets
 	//core funtions
 	public partial class DeckTrayDeckTileVisual
 	{
-		private static bool ForceNonPremiumMaterial(TAG_PREMIUM normal_tag, TAG_PREMIUM ideal_tag, bool in_arena, Actor deck_tile_actor, CallerInfo info_full)
+		private static bool ForceNonPremiumMaterial(TAG_PREMIUM normalTag, TAG_PREMIUM idealTag, bool inArena, Actor deckTileActor)
 		{
-			if (in_arena && Options.Get( ).GetBool(Option.HAS_DISABLED_PREMIUMS_THIS_DRAFT))
+			if (inArena && Options.Get( ).GetBool(Option.HAS_DISABLED_PREMIUMS_THIS_DRAFT))
 			{
-				LogMessage(deck_tile_actor, $"Material forced to {normal_tag}!", info_full);
+				LogMessage(deckTileActor, $"Material forced to {normalTag}!");
 				return true;
 			}
 
-			if (ideal_tag <= normal_tag)
+			if (idealTag <= normalTag)
 			{
 				string GetReason( )
 				{
-					return ideal_tag == TAG_PREMIUM.NORMAL ? "no others available" : "in already premium";
+					return idealTag == TAG_PREMIUM.NORMAL ? "no others available" : "in already premium";
 				}
 
-				LogMessage(deck_tile_actor, $"Material forced to {normal_tag}, because {GetReason( )}!", info_full);
+				LogMessage(deckTileActor, $"Material forced to {normalTag}, because {GetReason( )}!");
 				return true;
 			}
 
 			return false;
 		}
 
-		private static TAG_PREMIUM GetPremiumMaterial(bool in_arena, bool is_ghosted,
-													  [NotNull] CollectionDeckSlot deck_slot, [NotNull] CollectionDeckTileActor deck_tile_actor, CallerInfo info)
+		private static TAG_PREMIUM GetPremiumMaterial(bool inArena, bool isGhosted,
+													  [NotNull] CollectionDeckSlot deckSlot, [NotNull] CollectionDeckTileActor deckTileActor)
 		{
 			//copy every slot for future modify
 			//because we must have the same slot on card with 2+ copies
 
-			var DEFAULT_TAG = deck_slot.PreferredPremium;
-			if (is_ghosted)
+			var DEFAULT_TAG = deckSlot.PreferredPremium;
+			if (isGhosted)
 			{
 				//dont touch ghosted cards
-				deck_tile_actor.SetSlot(deck_slot);
-				LogMessage(deck_tile_actor, $"Using default {DEFAULT_TAG} material while card is ghosted", info);
+				deckTileActor.SetSlot(deckSlot);
+				LogMessage(deckTileActor, $"Using default {DEFAULT_TAG} material while card is ghosted");
 				return DEFAULT_TAG;
 			}
 
-			var IDEAL_TAG = deck_tile_actor.GetEntityDef( ).GetBestPossiblePremiumType(msg => Logger.Message(msg, info));
-			var NORMAL_TAG = deck_slot.UnPreferredPremium;
-			if (ForceNonPremiumMaterial(NORMAL_TAG, IDEAL_TAG, in_arena, deck_tile_actor, info))
+			var IDEAL_TAG = deckTileActor.GetEntityDef( ).GetBestPossiblePremiumType(msg => Logger.Message(msg));
+			var NORMAL_TAG = deckSlot.UnPreferredPremium;
+			if (ForceNonPremiumMaterial(NORMAL_TAG, IDEAL_TAG, inArena, deckTileActor))
 			{
-				var other_tags = EnumsChecker<TAG_PREMIUM>.Get( ).OtherEnums(NORMAL_TAG);
-				deck_tile_actor.SetSlot(CopySlot(deck_slot, NORMAL_TAG, other_tags));
+				var otherTags = EnumsChecker<TAG_PREMIUM>.Get( ).OtherEnums(NORMAL_TAG);
+				deckTileActor.SetSlot(CopySlot(deckSlot, NORMAL_TAG, otherTags));
 				return NORMAL_TAG;
 			}
 
 			if (DEFAULT_TAG != NORMAL_TAG && DEFAULT_TAG != IDEAL_TAG)
 			{
 				//add only non-CUSTOM_TAG's here
-				deck_tile_actor.SetSlot(CopySlot(deck_slot));
-				LogMessage(deck_tile_actor, $"Using default {DEFAULT_TAG} material", info);
+				deckTileActor.SetSlot(CopySlot(deckSlot));
+				LogMessage(deckTileActor, $"Using default {DEFAULT_TAG} material");
 				return DEFAULT_TAG;
 			}
 
-			deck_tile_actor.SetSlot(CopySlot(deck_slot, IDEAL_TAG, NORMAL_TAG));
-			LogMessage(deck_tile_actor, $"Using custom slot with {IDEAL_TAG} tag. Default tag is {DEFAULT_TAG}", info);
+			deckTileActor.SetSlot(CopySlot(deckSlot, IDEAL_TAG, NORMAL_TAG));
+			LogMessage(deckTileActor, $"Using custom slot with {IDEAL_TAG} tag. Default tag is {DEFAULT_TAG}");
 			return IDEAL_TAG;
 		}
 	}
@@ -201,23 +201,23 @@ namespace hearthstone_ex.Targets
 			if (string.IsNullOrEmpty(___m_slot.CardID))
 				return false;
 
-			var entity_def = ___m_slot.GetEntityDef( );
-			___m_actor.SetEntityDef(entity_def);
+			var entityDef = ___m_slot.GetEntityDef( );
+			___m_actor.SetEntityDef(entityDef);
 
 			var ghosted = GetGhostState(___m_slot, ___m_deck);
-			LogGhostedState(___m_actor, ghosted, new CallerInfo( ));
+			LogGhostedState(___m_actor, ghosted);
 			___m_actor.SetGhosted(ghosted);
 
-			var premium_tag = GetPremiumMaterial(___m_inArena, ghosted != GhostedState.NONE, ___m_slot, ___m_actor, new CallerInfo( ));
-			___m_actor.SetPremium(premium_tag);
+			var premiumTag = GetPremiumMaterial(___m_inArena, ghosted != GhostedState.NONE, ___m_slot, ___m_actor);
+			___m_actor.SetPremium(premiumTag);
 
-			var is_unique = /*entity_def != null &&*/ entity_def.IsElite( );
-			if (is_unique && ___m_inArena && ___m_slot.Count > 1)
-				is_unique = false;
+			var isUnique = /*entityDef != null &&*/ entityDef.IsElite( );
+			if (isUnique && ___m_inArena && ___m_slot.Count > 1)
+				isUnique = false;
 
-			___m_actor.UpdateDeckCardProperties(is_unique, false, ___m_slot.Count, ___m_useSliderAnimations);
+			___m_actor.UpdateDeckCardProperties(isUnique, false, ___m_slot.Count, ___m_useSliderAnimations);
 
-			DefLoader.Get( ).LoadCardDef(entity_def.GetCardId( ), (cardID, cardDef, data) =>
+			DefLoader.Get( ).LoadCardDef(entityDef.GetCardId( ), (cardID, cardDef, data) =>
 			{
 				using (cardDef)
 				{
@@ -228,7 +228,7 @@ namespace hearthstone_ex.Targets
 					___m_actor.UpdateMaterial(cardDef.CardDef.GetDeckCardBarPortrait( ));
 					___m_actor.UpdateGhostTileEffect( );
 				}
-			}, quality: new CardPortraitQuality(1, premium_tag));
+			}, quality: new CardPortraitQuality(1, premiumTag));
 
 			return false;
 		}

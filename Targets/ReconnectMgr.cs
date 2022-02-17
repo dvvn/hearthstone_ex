@@ -28,7 +28,7 @@ namespace hearthstone_ex.Targets
 				return method.DeclaringType?.FullName ?? method.Name;
 			}
 
-			Logger.Message($"{nameof(Mgr)}.{nameof(Mgr.FullResetRequired)}.Get sets to {value} by {GetCallerName(new StackTrace( ).GetFrame(1).GetMethod( ))}", new CallerInfo( ));
+			Logger.Message($"{nameof(Mgr)}.{nameof(Mgr.FullResetRequired)}.Get sets to {value} by {GetCallerName(new StackTrace( ).GetFrame(1).GetMethod( ))}");
 		}
 	}
 }
