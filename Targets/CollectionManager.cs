@@ -23,9 +23,8 @@ namespace hearthstone_ex.Targets
 			if (!ent.IsHero( ) || !ent.IsHeroSkin( ))
 				return;
 
-			var logger = new Action<string>(msg => Logger.Message(msg, nameof(CollectionManager)));
-			var newPremium = ent.GetBestPossiblePremiumType(logger);
-			logger($"{ent}: premium tag changed from {premium} to {newPremium}\n" + TagConvertor.MakeString(ent.GetTags( )));
+			var newPremium = ent.GetBestPossiblePremiumType(msg => Logger.Message(msg));
+			Logger.Message($"{ent}: premium tag changed from {premium} to {newPremium}\n" + ent.GetTags( ).JoinTags( ));
 			premium = newPremium;
 		}
 	}

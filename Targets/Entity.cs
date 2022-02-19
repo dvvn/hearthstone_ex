@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -9,18 +10,12 @@ using JetBrains.Annotations;
 using hearthstone_ex.Utils;
 using Ent = Entity;
 using Net = Network;
-using HistoryMgr = HistoryManager;
 
 namespace hearthstone_ex.Targets
 {
 	[HarmonyPatch(typeof(Ent))]
 	public partial class Entity : LoggerGui.Static<Entity>
 	{
-		private static bool UseRealGoldenTag( )
-		{
-			return SpectatorManager.Get( ).IsSpectatingOrWatching || GameMgr.Get( ).IsBattlegrounds( ) || !HistoryMgr.Get( ).IsHistoryEnabled( );
-		}
-
 		//struct EntInfo
 		//{
 		//	public int Id;
@@ -35,7 +30,7 @@ namespace hearthstone_ex.Targets
 
 		private static readonly IDictionary<int, TAG_PREMIUM> _fakePremiumCards = new Dictionary<int, TAG_PREMIUM>( );
 
-		private static void RegisterFakePremiumCard([NotNull] EntityBase ent, TAG_PREMIUM tag, [CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = 0)
+		private static void RegisterFakePremiumCard([NotNull] EntityBase ent, TAG_PREMIUM tag, [CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var id = ent.GetEntityId( );
 			if (_fakePremiumCards.TryGetValue(ent.GetEntityId( ), out _))
@@ -44,13 +39,14 @@ namespace hearthstone_ex.Targets
 			}
 			else
 			{
-				switch (ent.GetZone( ))
+				var zone = ent.GetZone( );
+				switch (zone)
 				{
 					case TAG_ZONE.PLAY:
 					case TAG_ZONE.DECK:
 					case TAG_ZONE.HAND:
-					case TAG_ZONE.SECRET:
-					case TAG_ZONE.SETASIDE:
+					case TAG_ZONE.SECRET: //not sure
+					case TAG_ZONE.SETASIDE: //all temp cars also stored
 					{
 						_fakePremiumCards.Add(id, tag);
 						Logger.Message($"{ent} added ({tag})", memberName, sourceLineNumber);
@@ -58,20 +54,20 @@ namespace hearthstone_ex.Targets
 					}
 					default:
 					{
-						Logger.Message($"{ent} NOT added. Tags:{Environment.NewLine}" + ent.GetTags( ).MakeString( ), memberName, sourceLineNumber);
+						Logger.Message($"{ent} NOT added. Zone: {zone}. Tags:{Environment.NewLine}" + ent.GetTags( ).JoinTags( ), memberName, sourceLineNumber);
 						break;
 					}
 				}
 			}
 		}
 
-		public static void ResetFakePremiumData([CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = 0)
+		public static void ResetFakePremiumData([CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			_fakePremiumCards.Clear( );
 			Logger.Message("Cleared", memberName, sourceLineNumber);
 		}
 
-		private static void SetGoldenTag([NotNull] Ent ent, [CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = 0)
+		private static void SetGoldenTag([NotNull] Ent ent, [CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			if (!ent.ControlledByFriendlyPlayer /*CreatedByFriendlyPlayer*/( ))
 			{
@@ -79,26 +75,11 @@ namespace hearthstone_ex.Targets
 				return;
 			}
 
+			//todo: find why cards shuffled in deck not processed
+
 			if (ent.GetPremiumType( ) != TAG_PREMIUM.NORMAL)
 				return;
-
-			TAG_PREMIUM tag = default;
-
-			if (!string.IsNullOrEmpty(ent.GetCardId( )))
-			{
-				tag = ent.GetBestPossiblePremiumType( );
-			}
-			else
-			{
-				var name = ent. /*GetEntityDef().*/GetName( );
-				var entDef = GetAllEntityDefs( ).FirstOrDefault(e => e.GetName( ) == name);
-				if (entDef != default)
-				{
-					tag = entDef.SelectBestPremiumType(entDef.HavePremiumTexture( ));
-					ent.LoadCard(entDef.GetCardId( ));
-				}
-			}
-
+			var tag = ent.GetBestPossiblePremiumType( );
 			if (tag == TAG_PREMIUM.NORMAL)
 			{
 				Logger.Message($"{ent} have no golden material", memberName, sourceLineNumber);
@@ -111,44 +92,16 @@ namespace hearthstone_ex.Targets
 			//Logger.Message($"{ent} set to {tag}");
 		}
 
-		[NotNull]
-		private static string ParseFlags([NotNull] TagMap map)
+		[Conditional("DEBUG")]
+		private static void SimpleLog(string msg)
 		{
-			//var strings = pairs.Select(t => new {name = ((GAME_TAG) t.Key).ToString( ), value = t.Value}).OrderByDescending(t => t.name).Select(t => $"{t.name}: {t.value}");
-			//return string.Join(", ", strings);
-			return map.MakeString( );
-		}
-
-		[NotNull]
-		private static string ParseFlags([NotNull] EntityBase ent)
-		{
-			return ParseFlags(ent.GetTags( ));
-		}
-
-		[NotNull]
-		private static string ParseFlags([NotNull] Net.Entity ent)
-		{
-			var tmap = new TagMap( );
-			var map = tmap.GetMap( );
-			foreach (var tag in ent.Tags)
-				map.Add(tag.Name, tag.Value);
-			return ParseFlags(tmap);
-		}
-
-		[NotNull]
-		private static IEnumerable<EntityDef> GetAllEntityDefs( )
-		{
-			return DefLoader.Get( ).GetAllEntityDefs( ).Select(p => p.Value);
+			Logger.Message(msg, string.Empty, string.Empty, 0);
 		}
 
 		//NEVER UPDATE THE ACTOR!!!
-		//stolen from deck cards ignored. to fixe it store ZONE_POSITION tag
 		private static bool RestoreFakePremium([NotNull] Ent from, [NotNull] Net.Entity to)
 		{
-			if (UseRealGoldenTag( ))
-				return false;
-
-			var toEntdef = GetAllEntityDefs( ).First(e => e.GetCardId( ) == to.CardID);
+			var toEntdef = CardInfo.GetAllEntityDefs( ).First(e => e.GetCardId( ) == to.CardID);
 
 			//const int FROM_TO_LAST = 1 << 0;
 			const int FROM_TO_DEFS = 1 << 1;
@@ -176,24 +129,24 @@ namespace hearthstone_ex.Targets
 					builder.Append("---From def: ");
 					builder.AppendLine(fromEntdef.ToString( ));
 					if (flags)
-						builder.AppendLine(ParseFlags(fromEntdef));
+						builder.AppendLine(fromEntdef.JoinTags( ));
 				}
 
 				builder.Append("---From: ");
 				builder.AppendLine(from.ToString( ));
 				if (flags)
-					builder.AppendLine(ParseFlags(from));
+					builder.AppendLine(from.JoinTags( ));
 				if (defs)
 				{
 					builder.Append("---To def: ");
 					builder.AppendLine(toEntdef.ToString( ));
 					if (flags)
-						builder.AppendLine(ParseFlags(toEntdef));
+						builder.AppendLine(toEntdef.JoinTags( ));
 				}
 
 				builder.AppendLine($"---To: [{to}]");
 				if (flags)
-					builder.Append(ParseFlags(to));
+					builder.Append(to.JoinTags( ));
 
 				return builder.ToString( );
 			}
@@ -215,7 +168,7 @@ namespace hearthstone_ex.Targets
 				return false;
 			}
 
-			Logger.Message($"Updating{Environment.NewLine}{PrintFromTo(FROM_TO_FLAGS | FROM_TO_FLAGS)}");
+			SimpleLog($"Updating{Environment.NewLine}{PrintFromTo(FROM_TO_FLAGS | FROM_TO_FLAGS)}");
 
 			if (!toEntdef.HavePremiumTexture( ))
 			{
@@ -223,47 +176,83 @@ namespace hearthstone_ex.Targets
 				return false;
 			}
 
-			try
-			{
-				//sometimes it hits null pointer 
-				Logger.Message($"Known fake premium cards:{Environment.NewLine}" +
-							   string.Join(Environment.NewLine, _fakePremiumCards.Select(p => GameState.Get( ).GetEntity(p.Key))
-																				 .OrderByDescending(s => s.GetEntityId( )))
-							   , string.Empty, string.Empty, 0);
-			}
-			catch (Exception)
-			{
-				// ignored
-			}
+			SimpleLog("Known fake premium cards:" + Environment.NewLine +
+					  string.Join(Environment.NewLine, _fakePremiumCards.OrderBy(p => p.Key).Select(p =>
+					  {
+						  var ent = GameState.Get( ).GetEntity(p.Key);
+						  return ent == null ? $"ENTITY {p.Key} NOT EXIST" : ent.ToString( );
+					  })));
 
-			Logger.Message("Trying to find native id", string.Empty, string.Empty, 0);
-			if (!_fakePremiumCards.TryGetValue(to.ID, out var premium))
+			string FoundMsg(bool found) => string.Format("{0}found", found ? string.Empty : "NOT ");
+
+			TAG_PREMIUM premium;
+			var creatorTag = to.Tags.FirstOrDefault(t => t.Name == (int) GAME_TAG.CREATOR);
+			//goto is simplier solution here
+			var creatorTagValid = creatorTag != default;
+			CREATOR_CHECK:
+			//SimpleLog($"{nameof(creatorTagValid)}: {creatorTagValid}");
+			if (!creatorTagValid)
 			{
-				var creator = to.Tags.FirstOrDefault(t => t.Name == (int) GAME_TAG.CREATOR);
-				if (creator != default)
+				//card probably changed by self
+				var found = _fakePremiumCards.TryGetValue(to.ID, out premium);
+				SimpleLog(string.Format("Card {0} in cache. {1}",
+										FoundMsg(found),
+										from.GetEntityId( ) == to.ID ? "texture updated" : $"changed from {from.GetEntityId( )} to {to.ID}"));
+			}
+			else
+			{
+				//prefer creator's tag
+				var found = _fakePremiumCards.TryGetValue(creatorTag.Value, out premium);
+				var creator = GameState.Get( ).GetEntity(creatorTag.Value);
+
+				if (creator == null)
 				{
-					Logger.Message($"Trying to find creator {GameState.Get( ).GetEntity(creator.Value)}", string.Empty, string.Empty, 0);
-					if (!_fakePremiumCards.TryGetValue(creator.Value, out premium))
+					SimpleLog($"Creator {FoundMsg(found)}");
+				}
+				else
+				{
+					var removed = creator.GetZone( ) == TAG_ZONE.REMOVEDFROMGAME;
+
+					SimpleLog(string.Format("Creator {0} {1} in cache{2}",
+											creator,
+											FoundMsg(found),
+											removed ? ", REMOVED from game!" : string.Empty));
+
+					if (!found && removed)
 					{
-						premium = default;
+						creatorTagValid = false;
+						goto CREATOR_CHECK;
 					}
 				}
 			}
 
 			if (premium == default)
 			{
-				Logger.Message("Not found!");
+				Logger.Message($"Used default ({premium}) tag.");
 				return false;
 			}
-			if (premium >= TAG_PREMIUM.DIAMOND) //>= for future use
+			if (premium >= TAG_PREMIUM.DIAMOND) // '>=' for future use
 			{
-				premium = toEntdef.SelectBestPremiumType(true);
+				//target probably isn't diamond
+				var newPremium = toEntdef.SelectBestPremiumType(true);
+				if (newPremium != premium)
+				{
+					SimpleLog($"{premium} tag owerriden with {newPremium}");
+					premium = newPremium;
+				}
 			}
 
-			Logger.Message($"Updating successful. {premium} tag selected", string.Empty, string.Empty, 0);
+			string FinalMsg( ) => $"Updating successful. {premium} tag selected";
 
-			if (from.GetEntityId( ) != to.ID)
+			if (from.GetEntityId( ) == to.ID)
+			{
+				SimpleLog(FinalMsg( ));
+			}
+			else
+			{
 				_fakePremiumCards.Add(to.ID, premium);
+				SimpleLog($"{FinalMsg( )}. New entity stored in cache");
+			}
 
 			premiumTag.Value = (int) premium;
 			return true;
@@ -276,7 +265,7 @@ namespace hearthstone_ex.Targets
 		[HarmonyPatch(nameof(Ent.OnFullEntity))]
 		public static void OnFullEntity([NotNull] Ent __instance)
 		{
-			if (UseRealGoldenTag( ))
+			if (!CardInfo.CanFakeGoldenTag( ))
 				return;
 
 			//golden cards while game starts
@@ -287,7 +276,7 @@ namespace hearthstone_ex.Targets
 		[HarmonyPatch(nameof(Ent.OnShowEntity))]
 		public static void OnShowEntity([NotNull] Ent __instance)
 		{
-			if (UseRealGoldenTag( ))
+			if (!CardInfo.CanFakeGoldenTag( ))
 				return;
 
 			//golden card when it taken from the deck, played by enemy, etc...
@@ -309,6 +298,11 @@ namespace hearthstone_ex.Targets
 										  [NotNull] List<int> ___m_subCardIDs,
 										  ref int ___m_queuedChangeEntityCount)
 		{
+			if (!CardInfo.CanFakeGoldenTag( ))
+				return true;
+
+			//full original function rebuild
+
 			if (___m_transformPowersProcessed.Contains(changeEntity))
 			{
 				___m_transformPowersProcessed.Remove(changeEntity);

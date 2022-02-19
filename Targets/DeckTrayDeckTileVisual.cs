@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using hearthstone_ex.Utils;
 using JetBrains.Annotations;
@@ -10,14 +12,74 @@ using SlotStatus = CollectionDeck.SlotStatus;
 using DelOnSlotEmptied = CollectionDeckSlot.DelOnSlotEmptied;
 using Tray = DeckTrayDeckTileVisual;
 
+namespace hearthstone_ex.Utils
+{
+	internal class CollectionDeckSlotWrapped : CollectionDeckSlot
+	{
+		private sealed class OnSlotEmptiedWrapper
+		{
+			private readonly DelOnSlotEmptied _original;
+
+			//added to fix deck copy-paste and autogenerator
+			//without this, while game generating deck, it always create new slot, so we have 2+ slots for same (golden) card, instead of one
+
+			public OnSlotEmptiedWrapper([NotNull] DelOnSlotEmptied fn) => _original = fn;
+			public void Invoke(CollectionDeckSlot slot) => _original(slot);
+		}
+
+		private void CopyFromEx(CollectionDeckSlot deckSlot)
+		{
+			CopyFrom(deckSlot);
+			m_entityDefOverride = deckSlot.m_entityDefOverride;
+		}
+
+		private void WrapSlot(DelOnSlotEmptied fn)
+		{
+			OnSlotEmptied = fn.Target is OnSlotEmptiedWrapper ? fn : new OnSlotEmptiedWrapper(fn).Invoke;
+		}
+
+		public CollectionDeckSlotWrapped([NotNull] CollectionDeckSlot deckSlot)
+		{
+			CopyFromEx(deckSlot);
+			WrapSlot(deckSlot.OnSlotEmptied);
+		}
+
+		public CollectionDeckSlotWrapped([NotNull] CollectionDeckSlot deckSlot, TAG_PREMIUM add, IEnumerable<TAG_PREMIUM> remove)
+		{
+			CopyFromEx(deckSlot);
+			//it called from OnSlotEmptied
+			OnSlotEmptied = null;
+
+			var removedCount = 0;
+			foreach (var tag in remove)
+			{
+				var count = deckSlot.GetCount(tag);
+				RemoveCard(count, tag);
+				removedCount += count;
+			}
+
+			//override removed cards with new one
+			AddCard(removedCount, add);
+			WrapSlot(deckSlot.OnSlotEmptied);
+		}
+
+		public CollectionDeckSlotWrapped([NotNull] CollectionDeckSlot deckSlot, TAG_PREMIUM add, params TAG_PREMIUM[ ] remove)
+			: this(deckSlot, add, remove.AsEnumerable( ))
+		{
+		}
+	}
+}
+
 namespace hearthstone_ex.Targets
 {
-	//logging
 	public partial class DeckTrayDeckTileVisual : LoggerGui.Static<DeckTrayDeckTileVisual>
 	{
 		[Conditional("DEBUG")]
-		private static void LogMessage([CanBeNull] Actor actor, string msg)
+		private static void LogMessage([CanBeNull] Actor actor, string msg, bool skip = false, [CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
+			if (skip)
+				return;
+
 			string GetName( )
 			{
 				if (actor != null)
@@ -30,100 +92,10 @@ namespace hearthstone_ex.Targets
 				return "UNKNOWN ENTITY";
 			}
 
-			Logger.Message($"{GetName( )}: {msg}");
-		}
-
-		[Conditional("DEBUG")]
-		private static void LogGhostedState([NotNull] Actor actor, GhostedState state)
-		{
-			if (state == GhostedState.NONE)
-				return;
-			LogMessage(actor, $"Ghost state set to {state}");
+			Logger.Message($"{GetName( )}: {msg}", memberName, "", sourceLineNumber);
 		}
 	}
 
-	//simple helpers
-	public partial class DeckTrayDeckTileVisual
-	{
-		private sealed class OnSlotEmptiedWrapper
-		{
-			private readonly DelOnSlotEmptied m_original;
-
-			//added to fix deck copy-paste and autogenerator
-			//without this, while game generating deck, it always create new slot, so we have 2+ slots for same (golden) card, instead of one
-
-			private OnSlotEmptiedWrapper(DelOnSlotEmptied original) => this.m_original = original;
-			private void Invoke(CollectionDeckSlot slot) => this.m_original(slot);
-
-			[NotNull]
-			public static DelOnSlotEmptied Create([NotNull] CollectionDeckSlot slot)
-			{
-				var fn = slot.OnSlotEmptied;
-				if (fn.Target is OnSlotEmptiedWrapper)
-					throw new AccessViolationException("Slot already copied!");
-				return new OnSlotEmptiedWrapper(fn).Invoke;
-			}
-		}
-
-		[NotNull]
-		private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot)
-		{
-			if (deck_slot.OnSlotEmptied.Target is OnSlotEmptiedWrapper)
-				return deck_slot;
-
-			var custom_slot = new CollectionDeckSlot( );
-			custom_slot.CopyFrom(deck_slot);
-
-			custom_slot.m_entityDefOverride = deck_slot.m_entityDefOverride;
-			custom_slot.OnSlotEmptied = OnSlotEmptiedWrapper.Create(deck_slot);
-
-			return custom_slot;
-		}
-
-		[NotNull]
-		private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot, TAG_PREMIUM add, [NotNull] IEnumerable<TAG_PREMIUM> remove)
-		{
-			var slot = CopySlot(deck_slot);
-
-			var on_slot_emptied = slot.OnSlotEmptied;
-			slot.OnSlotEmptied = _ => { };
-
-			var removed_count = 0;
-			foreach (var tag in remove)
-			{
-				var count = deck_slot.GetCount(tag);
-				slot.RemoveCard(count, tag);
-				removed_count += count;
-			}
-
-			slot.AddCard(removed_count, add);
-			slot.OnSlotEmptied = on_slot_emptied;
-			return slot;
-		}
-
-		[NotNull]
-		private static CollectionDeckSlot CopySlot([NotNull] CollectionDeckSlot deck_slot, TAG_PREMIUM add,
-												   [NotNull] params TAG_PREMIUM[ ] remove)
-		{
-			return CopySlot(deck_slot, add, remove.AsEnumerable( ));
-		}
-
-		private static GhostedState GetGhostState(CollectionDeckSlot deck_slot, [CanBeNull] CollectionDeck deck)
-		{
-			var status = deck?.GetSlotStatus(deck_slot) ?? SlotStatus.UNKNOWN;
-			switch (status)
-			{
-				case SlotStatus.NOT_VALID:
-					return GhostedState.RED;
-				case SlotStatus.MISSING:
-					return GhostedState.BLUE;
-				default:
-					return GhostedState.NONE;
-			}
-		}
-	}
-
-	//core funtions
 	public partial class DeckTrayDeckTileVisual
 	{
 		private static bool ForceNonPremiumMaterial(TAG_PREMIUM normalTag, TAG_PREMIUM idealTag, bool inArena, Actor deckTileActor)
@@ -148,8 +120,8 @@ namespace hearthstone_ex.Targets
 			return false;
 		}
 
-		private static TAG_PREMIUM GetPremiumMaterial(bool inArena, bool isGhosted,
-													  [NotNull] CollectionDeckSlot deckSlot, [NotNull] CollectionDeckTileActor deckTileActor)
+		private static TAG_PREMIUM SetActorSlot(bool inArena, bool isGhosted,
+												[NotNull] CollectionDeckSlot deckSlot, [NotNull] CollectionDeckTileActor deckTileActor)
 		{
 			//copy every slot for future modify
 			//because we must have the same slot on card with 2+ copies
@@ -168,19 +140,19 @@ namespace hearthstone_ex.Targets
 			if (ForceNonPremiumMaterial(NORMAL_TAG, IDEAL_TAG, inArena, deckTileActor))
 			{
 				var otherTags = EnumsChecker<TAG_PREMIUM>.Get( ).OtherEnums(NORMAL_TAG);
-				deckTileActor.SetSlot(CopySlot(deckSlot, NORMAL_TAG, otherTags));
+				deckTileActor.SetSlot(new CollectionDeckSlotWrapped(deckSlot, NORMAL_TAG, otherTags));
 				return NORMAL_TAG;
 			}
 
 			if (DEFAULT_TAG != NORMAL_TAG && DEFAULT_TAG != IDEAL_TAG)
 			{
 				//add only non-CUSTOM_TAG's here
-				deckTileActor.SetSlot(CopySlot(deckSlot));
+				deckTileActor.SetSlot(new CollectionDeckSlotWrapped(deckSlot));
 				LogMessage(deckTileActor, $"Using default {DEFAULT_TAG} material");
 				return DEFAULT_TAG;
 			}
 
-			deckTileActor.SetSlot(CopySlot(deckSlot, IDEAL_TAG, NORMAL_TAG));
+			deckTileActor.SetSlot(new CollectionDeckSlotWrapped(deckSlot, IDEAL_TAG, NORMAL_TAG));
 			LogMessage(deckTileActor, $"Using custom slot with {IDEAL_TAG} tag. Default tag is {DEFAULT_TAG}");
 			return IDEAL_TAG;
 		}
@@ -189,9 +161,12 @@ namespace hearthstone_ex.Targets
 	[HarmonyPatch(typeof(Tray))]
 	public partial class DeckTrayDeckTileVisual
 	{
+		// ReSharper disable InconsistentNaming
+		private static readonly MethodInfo GetGhostedState = AccessTools.Method(typeof(Tray), nameof(GetGhostedState));
+
 		[HarmonyPrefix]
 		[HarmonyPatch(nameof(SetUpActor))]
-		public static bool SetUpActor(bool ___m_inArena, bool ___m_useSliderAnimations,
+		public static bool SetUpActor(Tray __instance, bool ___m_inArena, bool ___m_useSliderAnimations,
 									  [CanBeNull] CollectionDeckSlot ___m_slot, [CanBeNull] CollectionDeckTileActor ___m_actor, [NotNull] CollectionDeck ___m_deck)
 		{
 			//full rebuild of game's function
@@ -201,14 +176,20 @@ namespace hearthstone_ex.Targets
 			if (string.IsNullOrEmpty(___m_slot.CardID))
 				return false;
 
+			//m_actor.SetSlot
+			//m_actor.SetPremium
+			//m_actor.SetEntityDef
+			//m_actor.SetGhosted
+			//m_actor.UpdateDeckCardProperties
+
 			var entityDef = ___m_slot.GetEntityDef( );
 			___m_actor.SetEntityDef(entityDef);
 
-			var ghosted = GetGhostState(___m_slot, ___m_deck);
-			LogGhostedState(___m_actor, ghosted);
+			var ghosted = (GhostedState) GetGhostedState.Invoke(__instance, null);
+			LogMessage(___m_actor, $"Ghosted state set to {ghosted}", ghosted == GhostedState.NONE);
 			___m_actor.SetGhosted(ghosted);
 
-			var premiumTag = GetPremiumMaterial(___m_inArena, ghosted != GhostedState.NONE, ___m_slot, ___m_actor);
+			var premiumTag = SetActorSlot(___m_inArena, ghosted != GhostedState.NONE, ___m_slot, ___m_actor);
 			___m_actor.SetPremium(premiumTag);
 
 			var isUnique = /*entityDef != null &&*/ entityDef.IsElite( );

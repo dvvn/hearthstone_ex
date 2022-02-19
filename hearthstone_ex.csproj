@@ -68,6 +68,7 @@
     <Compile Include="Targets\RewardTrackSkinChoiceConfirmation.cs" />
     <Compile Include="Targets\SceneDebugger.cs" />
     <Compile Include="Targets\TB_BaconShop.cs" />
+    <Compile Include="Utils\TagConvertor.cs" />
     <None Include="packages.config" />
     <Compile Include="Utils\CardInfo.cs" />
     <Compile Include="Utils\Logger.cs" />

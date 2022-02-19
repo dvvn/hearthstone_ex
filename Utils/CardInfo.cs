@@ -6,7 +6,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using HarmonyLib;
 
 namespace hearthstone_ex.Utils
 {
@@ -82,12 +81,13 @@ namespace hearthstone_ex.Utils
 			return ent.GetEntityDef( ).SelectBestPremiumType(ent.HavePremiumTexture( ));
 		}
 
-		[Obsolete]
+		[Obsolete("Doesn't work properly")]
 		public static bool CreatedByFriendlyPlayer([NotNull] this EntityBase ent)
 		{
 			return ent.GetCreatorId( ) == GameState.Get( ).GetFriendlySidePlayer( ).GetPlayerId( );
 		}
 
+		[Obsolete("Doesn't work properly")]
 		public static bool ControlledByFriendlyPlayer([NotNull] this Network.Entity ent)
 		{
 			//FAKE_CONTROLLER?
@@ -100,62 +100,30 @@ namespace hearthstone_ex.Utils
 		{
 			return ent.GetControllerId( ) == GameState.Get( ).GetFriendlySidePlayer( ).GetPlayerId( );
 		}
-	}
 
-	internal static class TagConvertor
-	{
-		private struct TagInfo
+		public static bool CanFakeGoldenTag( )
 		{
-			//GAME_TAG.XXXX
-			public string Key;
+			//if any custom config here, add it also to
+			//DeckTrayDeckTileVisual::SetUpActor
+			//
 
-			//TAG_XXXXX
-			public Type Tag;
-
-			//public override string ToString( )
-			//{
-			//	return $"{Key}: {Tag}";
-			//}
+			if (SpectatorManager.Get( ).IsSpectatingOrWatching)
+				return false;
+			var mgr = GameMgr.Get( );
+			if (mgr.IsBattlegroundsTutorial( ) || mgr.IsLettuceTutorial( ) || mgr.IsTraditionalTutorial( ))
+				return false;
+			if (mgr.IsArena( ))
+				return !Options.Get( ).GetBool(Option.HAS_DISABLED_PREMIUMS_THIS_DRAFT);
+			if (mgr.IsBattlegrounds( ))
+				return false;
+			//todo: if brawl/dungeon with generated deck return false
+			return true;
 		}
 
-		private static IReadOnlyDictionary<int, TagInfo> FillAllTags( )
+		[NotNull]
+		public static IEnumerable<EntityDef> GetAllEntityDefs( )
 		{
-			var knownTags = AccessTools.AllTypes( ).Where(t => t.IsEnum && t.Name.StartsWith("TAG_")).ToArray( );
-
-			var dict = new Dictionary<int, TagInfo>( );
-			foreach (var value in typeof(GAME_TAG).GetEnumValues( ).Cast<GAME_TAG>( ))
-			{
-				var name = value.ToString( );
-
-				if (dict.ContainsKey((int) value))
-				{
-					var entry = dict[(int) value];
-					entry.Key = null;
-				}
-				else
-				{
-					dict.Add((int) value, new TagInfo {Key = name, Tag = knownTags.FirstOrDefault(t => t.Name.Length == name.Length + 4 && t.Name.EndsWith(name))});
-				}
-			}
-
-			return dict;
-		}
-
-		private static readonly IReadOnlyDictionary<int, TagInfo> _allTags = FillAllTags( );
-
-		public static string MakeString(this TagMap tags)
-		{
-			var infoDef = new TagInfo( );
-			return string.Join(Environment.NewLine, tags.GetMap( ).Select(item =>
-			{
-				if (!_allTags.TryGetValue(item.Key, out var info))
-					info = infoDef;
-
-				var keyStr = info.Key ?? item.Key.ToString( );
-				var tagStr = info.Tag == null ? item.Value.ToString( ) : Enum.GetName(info.Tag, item.Value);
-
-				return new {Key = keyStr, Tag = tagStr};
-			}).OrderBy(p => p.Key).Select(p => $"{p.Key}: {p.Tag}"));
+			return DefLoader.Get( ).GetAllEntityDefs( ).Select(p => p.Value);
 		}
 	}
 }
