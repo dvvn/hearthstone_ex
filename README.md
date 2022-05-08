@@ -16,7 +16,9 @@ Debug menu unlocked
 
 Cheats inside debug menu unlocked (most of these won't work)
 
-Removed some annoying warnings
+Removed warning on cards disenchant
+
+removed warning when deleting a deck
 
 Sending exceptions to the server is disabled
 
