@@ -8,7 +8,7 @@ namespace hearthstone_ex.Targets
 	[HarmonyPatch(typeof(Actors))]
 	public class CollectionCardActors : LoggerGui.Static<Actors>
 	{
-		//golden hero skins in collection, on arena end other places
+		//golden hero skins in collection, on arena and other places
 
 		[HarmonyPrefix]
 		[HarmonyPatch(nameof(Actors.AddCardActor))]
