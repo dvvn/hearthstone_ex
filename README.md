@@ -21,3 +21,7 @@ Removed some annoying warnings
 Sending exceptions to the server is disabled
 
 Some internal game fixes
+
+------
+
+Now it pulbic, because i wont play this game anymore
