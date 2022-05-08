@@ -25,3 +25,7 @@ Some internal game fixes
 ------
 
 Now it pulbic, because i wont play this game anymore
+
+Usage: install [HarmonyX](https://github.com/BepInEx/HarmonyX) package from nuget.
+Put [UnityDoorstop](https://github.com/NeighTools/UnityDoorstop) into game's folder.
+Build hs_ex & Play
