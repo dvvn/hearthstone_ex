@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using hearthstone_ex.Utils;
-using JetBrains.Annotations;
 using Actors = CollectionCardActors;
 
 namespace hearthstone_ex.Targets
@@ -12,7 +11,7 @@ namespace hearthstone_ex.Targets
 
 		[HarmonyPrefix]
 		[HarmonyPatch(nameof(Actors.AddCardActor))]
-		public static void AddCardActor([NotNull] Actor actor)
+		public static void AddCardActor( Actor actor)
 		{
 			if (actor.GetPremium( ) != TAG_PREMIUM.NORMAL)
 				return;

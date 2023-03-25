@@ -14,7 +14,7 @@ namespace hearthstone_ex.Targets
 		public static bool CanCheckForInactivity(ref bool __result)
 		{
 			__result = false;
-			return false;
+			return HookInfo.SKIP_ORIGINAL;
 		}
 	}
 }

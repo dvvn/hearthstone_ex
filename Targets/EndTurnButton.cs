@@ -10,7 +10,7 @@ namespace hearthstone_ex.Targets
 #if false
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SetStateToYourTurn))]
-        public static void SetStateToYourTurn([NotNull] Button __instance)
+        public static void SetStateToYourTurn( Button __instance)
         {
             IEnumerator DoFlash()
             {

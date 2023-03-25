@@ -16,7 +16,7 @@ namespace hearthstone_ex.Targets
 		public static bool FullResetRequired_get(ref bool __result)
 		{
 			__result = false;
-			return false;
+			return HookInfo.SKIP_ORIGINAL;
 		}
 
 		[HarmonyPrefix]
@@ -28,7 +28,7 @@ namespace hearthstone_ex.Targets
 				return method.DeclaringType?.FullName ?? method.Name;
 			}
 
-			Logger.Message($"{nameof(Mgr)}.{nameof(Mgr.FullResetRequired)}.Get sets to {value} by {GetCallerName(new StackTrace( ).GetFrame(1).GetMethod( ))}");
+			Logger.Message($"{nameof(Mgr)}.{nameof(Mgr.FullResetRequired)}.Get sets to {value} by {GetCallerName(new StackTrace().GetFrame(1).GetMethod())}");
 		}
 	}
 }

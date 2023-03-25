@@ -13,7 +13,7 @@ namespace hearthstone_ex.Targets
 
         [HarmonyPrefix]
         [HarmonyPatch("Update")]
-        public static bool Update([NotNull] global::MatchingQueueTab __instance, ref float ___m_timeInQueue, ElapsedStringSet ___m_timeStringSet)
+        public static bool Update( global::MatchingQueueTab __instance, ref float ___m_timeInQueue, ElapsedStringSet ___m_timeStringSet)
         {
             //full rebuild
 

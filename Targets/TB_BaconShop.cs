@@ -1,5 +1,4 @@
 using HarmonyLib;
-using JetBrains.Annotations;
 using BaconShop = TB_BaconShop;
 
 namespace hearthstone_ex.Targets
@@ -9,12 +8,12 @@ namespace hearthstone_ex.Targets
 	{
 		[HarmonyPrefix]
 		[HarmonyPatch(nameof(GetBobActor))]
-		public static bool GetBobActor([CanBeNull] ref Actor __result)
+		public static bool GetBobActor(ref Actor __result)
 		{
 			//STFU Bob retard!!!
 
 			__result = null;
-			return false;
+			return HookInfo.SKIP_ORIGINAL;
 		}
 	}
 }

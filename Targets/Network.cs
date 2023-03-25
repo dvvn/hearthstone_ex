@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using JetBrains.Annotations;
 using PegasusUtil;
 using NetworkHs = Network;
 
@@ -10,7 +9,7 @@ namespace hearthstone_ex.Targets
 	{
 		[HarmonyPostfix]
 		[HarmonyPatch(nameof(NetworkHs.GetAchievementComplete))]
-		public static void GetAchievementComplete([NotNull] AchievementComplete __result)
+		public static void GetAchievementComplete( AchievementComplete __result)
 		{
 			AchievementManager.CompleteAchievements = __result;
 		}

@@ -1,16 +1,16 @@
 ﻿using HarmonyLib;
 using Hearthstone.UI;
 using hearthstone_ex.Utils;
-using JetBrains.Annotations;
+using Confirmation = RewardTrackSkinChoiceConfirmation;
 
 namespace hearthstone_ex.Targets
 {
-	[HarmonyPatch(typeof(global::RewardTrackSkinChoiceConfirmation))]
-	public class RewardTrackSkinChoiceConfirmation : LoggerGui.Static<RewardTrackSkinChoiceConfirmation>
+	[HarmonyPatch(typeof(Confirmation))]
+	public class RewardTrackSkinChoiceConfirmation : LoggerGui.Static<Confirmation>
 	{
 		[HarmonyPostfix]
 		[HarmonyPatch(nameof(Awake))]
-		public static void Awake([NotNull] WidgetTemplate ___m_widget)
+		public static void Awake(WidgetTemplate ___m_widget)
 		{
 			___m_widget.RegisterEventListener(eventName => Logger.Message(eventName));
 		}

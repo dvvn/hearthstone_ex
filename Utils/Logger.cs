@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
 using Debug = UnityEngine.Debug;
+using Blizzard.T5.Logging;
 
 //-
 //using _CallerMemberName = System.Runtime.CompilerServices.CallerMemberNameAttribute;
@@ -34,7 +35,7 @@ namespace hearthstone_ex.Utils
 {
 	internal static class LoggerTools
 	{
-		public static void AppendBrackets([NotNull] this StringBuilder buffer, [NotNull] IEnumerable<object> args)
+		public static void AppendBrackets(this StringBuilder buffer, IEnumerable<object> args)
 		{
 			buffer.Append('[');
 			foreach (var a in args)
@@ -42,9 +43,9 @@ namespace hearthstone_ex.Utils
 			buffer.Append(']');
 		}
 
-		public static void AppendBrackets([NotNull] this StringBuilder buffer, params object[ ] args)
+		public static void AppendBrackets(this StringBuilder buffer, params object[] args)
 		{
-			AppendBrackets(buffer, args.AsEnumerable( ));
+			AppendBrackets(buffer, args.AsEnumerable());
 		}
 	}
 
@@ -54,7 +55,8 @@ namespace hearthstone_ex.Utils
 		public readonly string SourceFilePath;
 		public readonly int SourceLineNumber;
 
-		public CallerInfo([CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
+		public CallerInfo([CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "",
+			[CallerLineNumber] int sourceLineNumber = -1)
 		{
 			MemberName = memberName;
 			SourceFilePath = sourceFilePath;
@@ -76,9 +78,10 @@ namespace hearthstone_ex.Utils
 
 		//public string ApplyFilter(string str) => this.m_filter(str);
 
-		protected LoggerBase([NotNull] Type type, [NotNull] string rootPrefix = "HS_EX", bool fullTypeName = false, [NotNull] params object[ ] extra)
+		protected LoggerBase(Type type, string rootPrefix = "HS_EX", bool fullTypeName = false,
+			params object[] extra)
 		{
-			var buffer = new StringBuilder( );
+			var buffer = new StringBuilder();
 
 			buffer.AppendBrackets(rootPrefix);
 			var typeName = fullTypeName ? type.FullName : type.Name;
@@ -89,11 +92,11 @@ namespace hearthstone_ex.Utils
 				buffer.Append(str);
 			}
 
-			_prefix = buffer.ToString( );
+			_prefix = buffer.ToString();
 		}
 
-		[NotNull]
-		protected string PrepareMessage([CanBeNull] string memberName, string sourceFilePath, int sourceLineNumber, object message)
+		protected string PrepareMessage(string memberName, string sourceFilePath, int sourceLineNumber,
+			object message)
 		{
 			var buffer = new StringBuilder(_prefix);
 
@@ -108,41 +111,44 @@ namespace hearthstone_ex.Utils
 			buffer.Append(' ');
 			buffer.Append(message);
 
-			return buffer.ToString( );
+			return buffer.ToString();
 		}
 
 		protected abstract void ErrorImpl(object msg);
 		protected abstract void WarningImpl(object msg);
 		protected abstract void MessageImpl(object msg);
 
-		public void Error(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
+		public void Error(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/
+			string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var msg = PrepareMessage(memberName, sourceFilePath, sourceLineNumber, message);
 			ErrorImpl(msg);
 		}
 
-		public void Warning(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
+		public void Warning(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/
+			string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var msg = PrepareMessage(memberName, sourceFilePath, sourceLineNumber, message);
 			WarningImpl(msg);
 		}
 
 		[Conditional("DEBUG")]
-		public void Message(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/ string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
+		public void Message(object message, [CallerMemberName] string memberName = "", /*[CallerFilePath]*/
+			string sourceFilePath = "", [CallerLineNumber] int sourceLineNumber = -1)
 		{
 			var msg = PrepareMessage(memberName, sourceFilePath, sourceLineNumber, message);
 			MessageImpl(msg);
 		}
 
 		[Obsolete]
-		public void Error(object message, [NotNull] CallerInfo info) => Error(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
+		public void Error(object message, CallerInfo info) => Error(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
 
 		[Obsolete]
-		public void Warning(object message, [NotNull] CallerInfo info) => Warning(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
+		public void Warning(object message, CallerInfo info) => Warning(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
 
 		[Obsolete]
 		[Conditional("DEBUG")]
-		public void Message(object message, [NotNull] CallerInfo info) => Message(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
+		public void Message(object message, CallerInfo info) => Message(message, info.MemberName, info.SourceFilePath, info.SourceLineNumber);
 
 		[Conditional("DEBUG")]
 		public void Message(object message, string memberName, int sourceLineNumber) => Message(message, memberName, "", sourceLineNumber);
@@ -155,7 +161,7 @@ namespace hearthstone_ex.Utils
 			public static readonly LoggerBase Logger = new LoggerFile(typeof(T));
 		}
 
-		public LoggerFile([NotNull] Type type)
+		public LoggerFile(Type type)
 			: base(type)
 		{
 		}
@@ -175,44 +181,13 @@ namespace hearthstone_ex.Utils
 			Debug.Log(msg);
 		}
 	}
+	//todo: add console
 
-	public class LoggerGui : LoggerBase
+	public class LoggerGui : LoggerFile
 	{
-		public class Static<T>
-		{
-			public static readonly LoggerBase Logger = new LoggerGui(typeof(T));
-		}
-
-		protected readonly SceneDebugger Window;
-		public static SceneDebugger DefaultWindow { get; private set; }
-
-		public static void SetDefaultWindow(SceneDebugger wnd)
-		{
-			if (DefaultWindow != null)
-				throw new FieldAccessException($"{nameof(DefaultWindow)} already initialized!");
-			DefaultWindow = wnd;
-		}
-
-		public LoggerGui([NotNull] Type type, [CanBeNull] SceneDebugger window = null)
+		public LoggerGui(Type type)
 			: base(type)
 		{
-			// ReSharper disable once ArrangeConstructorOrDestructorBody
-			Window = window ?? DefaultWindow ?? throw new NullReferenceException($"{nameof(DefaultWindow)} is null!");
-		}
-
-		protected override void ErrorImpl([NotNull] object msg)
-		{
-			Window.AddMessage(Log.LogLevel.Error, msg.ToString( ));
-		}
-
-		protected override void WarningImpl([NotNull] object msg)
-		{
-			Window.AddMessage(Log.LogLevel.Warning, msg.ToString( ));
-		}
-
-		protected override void MessageImpl([NotNull] object msg)
-		{
-			Window.AddMessage(Log.LogLevel.Info, msg.ToString( ));
 		}
 	}
 }

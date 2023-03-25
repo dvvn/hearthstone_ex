@@ -1,9 +1,11 @@
-﻿using Blizzard.Commerce;
+﻿#if false
+using Blizzard.Commerce;
 using HarmonyLib;
-using logger = Hearthstone.Commerce.BlizzardCommerceLogger;
+using logger = Hearthstone.Commerce.CommerceExtensions;
 
 namespace hearthstone_ex.Targets
 {
+	
 	[HarmonyPatch(typeof(logger))]
 	public class BlizzardCommerceLogger
 	{
@@ -29,3 +31,4 @@ namespace hearthstone_ex.Targets
 		}
 	}
 }
+#endif

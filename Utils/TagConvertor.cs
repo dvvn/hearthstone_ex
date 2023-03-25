@@ -21,7 +21,7 @@ namespace hearthstone_ex.Utils
 			//}
 		}
 
-		private static IReadOnlyDictionary<int, TagInfo> FillAllTags( )
+		private static IDictionary<int, TagInfo> FillAllTags( )
 		{
 			var knownTags = AccessTools.AllTypes( ).Where(t => t.IsEnum && t.Name.StartsWith("TAG_")).ToArray( );
 
@@ -48,7 +48,7 @@ namespace hearthstone_ex.Utils
 			return dict;
 		}
 
-		private static readonly IReadOnlyDictionary<int, TagInfo> _allTags = FillAllTags( );
+		private static readonly IDictionary<int, TagInfo> _allTags = FillAllTags( );
 
 		private static string JoinTagsImpl /*<TKey, TValue>*/(IEnumerable<KeyValuePair /*<TKey, TValue>*/<int, int>> tags, string separator)
 		{

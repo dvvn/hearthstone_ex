@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using HarmonyLib;
 using hearthstone_ex.Utils;
-using JetBrains.Annotations;
 using PegasusUtil;
 using Manager = Hearthstone.Progression.AchievementManager;
 using Status = Hearthstone.Progression.AchievementManager.AchievementStatus;
@@ -54,7 +53,7 @@ namespace hearthstone_ex.Targets
 
 		[HarmonyPostfix]
 		[HarmonyPatch(nameof(OnAchievementComplete))]
-		public static void OnAchievementComplete([NotNull] Manager __instance)
+		public static void OnAchievementComplete( Manager __instance)
 		{
 			var ids = CompleteAchievements?.AchievementIds;
 			if (ids == null || ids.Count == 0)
