@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -155,8 +156,7 @@ namespace hearthstone_ex
 				var type = typeof(T);
 				if (!resolvedTypes.TryGetValue(type.Name, out var info))
 				{
-					info = new EnumInfo
-						{ Names = type.GetEnumNames(), Values = type.GetEnumValues().Cast<int>().ToArray() };
+					info = new EnumInfo { Names = type.GetEnumNames(), Values = type.GetEnumValues().Cast<int>().ToArray() };
 					resolvedTypes.Add(name, info);
 				}
 
