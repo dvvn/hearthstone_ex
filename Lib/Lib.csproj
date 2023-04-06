@@ -21,7 +21,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>$(SolutionDir)bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -32,7 +32,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>$(SolutionDir)bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -71,7 +71,6 @@
     <Compile Include="Utils\TagConvertor.cs" />
     <Compile Include="Utils\CardInfo.cs" />
     <Compile Include="Utils\Logger.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Targets\HearthstoneApplication.cs" />
     <Compile Include="Targets\CollectionManager.cs" />
     <Compile Include="Targets\AchievementManager.cs" />
@@ -452,30 +451,11 @@
       <Version>2.10.1</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>@echo on
-
-set "path=C:\Program Files (x86)\Hearthstone"
-set "file=doorstop_config.ini"
-set "target="%25path%25\%25file%25""
-
-echo %25target%25 
-del %25target%25
- 
-echo [General] &gt;&gt; %25target%25
-echo enabled=true &gt;&gt; %25target%25
-echo target_assembly=$(TargetPath)  &gt;&gt; %25target%25
-echo redirect_output_log=false &gt;&gt; %25target%25
-echo ignore_disable_switch=false &gt;&gt; %25target%25
-if "$(Configuration)" == "Debug" goto :debug
-goto :exit
-
-:debug
-echo [UnityMono] &gt;&gt; %25target%25
-echo debug_enabled=true &gt;&gt; %25target%25
-echo debug_address=127.0.0.1:10000 &gt;&gt; %25target%25
-echo debug_suspend=false &gt;&gt; %25target%25
-:exit</PostBuildEvent>
+    <PostBuildEvent>start $(OutDir)\net7.0\Installer.exe</PostBuildEvent>
   </PropertyGroup>
 </Project>

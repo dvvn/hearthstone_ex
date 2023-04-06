@@ -1,9 +1,5 @@
-﻿using JetBrains.Annotations;
-using PegasusShared;
-using UnityEngine;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using Blizzard.T5.Services;
 
@@ -69,8 +65,8 @@ namespace hearthstone_ex.Utils
 		{
 			if (!havePremiumTexture)
 				return TAG_PREMIUM.NORMAL;
-			if (ent.HasTag(GAME_TAG.HAS_SIGNATURE_QUALITY))
-				return TAG_PREMIUM.SIGNATURE;
+			/*if (ent.HasTag(GAME_TAG.HAS_SIGNATURE_QUALITY))
+				return TAG_PREMIUM.SIGNATURE;*/
 			if (ent.HasTag(GAME_TAG.HAS_DIAMOND_QUALITY))
 				return TAG_PREMIUM.DIAMOND;
 			return TAG_PREMIUM.GOLDEN;

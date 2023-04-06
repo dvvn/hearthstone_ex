@@ -1,13 +1,8 @@
-﻿using Microsoft.Win32;
-using System.Globalization;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
-using System.Threading;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Mono.Security.Protocol.Ntlm;
 
 // ReSharper disable once CheckNamespace
 namespace Doorstop

@@ -206,10 +206,11 @@ namespace hearthstone_ex.Targets
 
 			___m_actor.UpdateCardRuneBannerComponent();
 			___m_actor.UpdateNameTextForRuneBar(___m_offsetCardNameForRunes);
-			___m_actor.SetupSideboard();
-
-			___m_actor.UpdateDeckCardProperties(isUnique, false, ___m_slot.Count, ___m_useSliderAnimations);
+			if (___m_deck != null)
+				___m_actor.SetupSideboard(___m_deck.GetSideboard(entityDef.GetCardId()));
 			
+			___m_actor.UpdateDeckCardProperties(isUnique, false, ___m_slot.Count, ___m_useSliderAnimations);
+
 			DefLoader.Get().LoadCardDef(entityDef.GetCardId(), (cardID, cardDef, data) =>
 			{
 				using (cardDef)
