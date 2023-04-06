@@ -75,9 +75,9 @@ namespace hearthstone_ex
 			await st.CopyToAsync(file);
 		}
 
-		private static async Task<DirectoryInfo> DownloadFullDlls(string dir, string hsVersion)
+		private static async Task<DirectoryInfo> DownloadFullDlls(string dir, string unityVersion)
 		{
-			for (var unityVersion = hsVersion; !string.IsNullOrEmpty(unityVersion); unityVersion = unityVersion.Remove(unityVersion.LastIndexOf('.')))
+			for (;;)
 			{
 				var url = $"https://unity.bepinex.dev/corlibs/{unityVersion}.zip";
 				var dllsDir = new DirectoryInfo(Path.Combine(dir, unityVersion));
@@ -96,14 +96,15 @@ namespace hearthstone_ex
 					}
 					catch (Exception e)
 					{
+						if (unityVersion.StartsWith('.') || !unityVersion.Contains('.'))
+							return null;
+						unityVersion = unityVersion.Remove(unityVersion.LastIndexOf('.'));
 						continue;
 					}
 				}
 
 				return dllsDir;
 			}
-
-			return null;
 		}
 
 		private static async Task DownloadDoorstop(string hsDir)
@@ -133,7 +134,7 @@ namespace hearthstone_ex
 					continue;
 				if (entry.FullName.Contains("x64")) //todo: auto detect it
 					continue;
-				
+
 				await WriteZippedFile(hsDir, entry);
 				break;
 			}
