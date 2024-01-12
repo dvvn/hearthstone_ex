@@ -10,7 +10,7 @@ namespace hearthstone_ex
 {
 	internal class Installer
 	{
-		private static string FindHearthstoneDir()
+		private static string FindHearthstoneDir( )
 		{
 			using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Hearthstone"))
 			{
@@ -25,7 +25,7 @@ namespace hearthstone_ex
 			using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"))
 			{
 				Debug.Assert(key != null);
-				foreach (var subkeyName in key.GetSubKeyNames())
+				foreach (var subkeyName in key.GetSubKeyNames( ))
 				{
 					using var subkey = key.OpenSubKey(subkeyName);
 					if (subkey == null)
@@ -44,19 +44,24 @@ namespace hearthstone_ex
 			return string.Empty;
 		}
 
-		private static FileInfo FindLibDir()
+		private static string GetWorkingDirectory( )
 		{
-			var selfPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-			var workPath = Path.GetDirectoryName(selfPath);
-			Debug.Assert(workPath != null);
-			for (DirectoryInfo dir = new(workPath); dir != null; dir = dir.Parent)
-			{
-				foreach (var file in dir.EnumerateFiles())
+			var selfPath = System.Reflection.Assembly.GetExecutingAssembly( ).Location;
+			return Path.GetDirectoryName(selfPath);
+		}
+
+		private static FileInfo FindLibDir( )
+		{
+			var workPath = GetWorkingDirectory( );
+			if (workPath != null)
+				for (DirectoryInfo dir = new(workPath); dir != null; dir = dir.Parent)
 				{
-					if (file.Name == "hearthstone_ex.dll")
-						return file;
+					foreach (var file in dir.EnumerateFiles( ))
+					{
+						if (file.Name == "hearthstone_ex.dll")
+							return file;
+					}
 				}
-			}
 
 			return null;
 		}
@@ -70,128 +75,149 @@ namespace hearthstone_ex
 
 		private static async Task WriteZippedFile(string dir, ZipArchiveEntry entry)
 		{
-			await using var st = entry.Open();
+			await using var st = entry.Open( );
 			await using var file = File.Create(Path.Combine(dir, entry.Name));
 			await st.CopyToAsync(file);
 		}
 
-		private static async Task<DirectoryInfo> DownloadFullDlls(string dir, string unityVersion)
+		private static async Task<ZipArchive> DownloadZipFromBepinex(string subDir, string unityVersion, HttpClient client)
 		{
+			var url = $"https://unity.bepinex.dev/{subDir}/{unityVersion}.zip";
+			await using var zipFile = await client.GetStreamAsync(url);
+			return new(zipFile);
+		}
+
+		private static async Task<ZipArchive> DownloadZipFromBepinex(string subDir, string unityVersion)
+		{
+			using var client = new HttpClient( );
+			return await DownloadZipFromBepinex(subDir, unityVersion, client);
+		}
+
+		//ExtractToDirectory
+		private static async Task ExtractArchive(ZipArchive archive, FileSystemInfo dir)
+		{
+			foreach (var entry in archive.Entries)
+				await WriteZippedFile(dir.FullName, entry);
+		}
+
+		//todo: add code to download from unity servers if bepinex dll doesn't work
+		private static async Task<DirectoryInfo> DownloadUnstrippedDlls(string rootDir, string unityVersionRaw)
+		{
+			var space = unityVersionRaw.IndexOf(' ');
+			var unityVersion = space == -1 ? unityVersionRaw : unityVersionRaw.Remove(space);
+
+			using HttpClient httpClient = new( );
+
 			for (;;)
 			{
-				var url = $"https://unity.bepinex.dev/corlibs/{unityVersion}.zip";
-				var dllsDir = new DirectoryInfo(Path.Combine(dir, unityVersion));
-				if (!dllsDir.Exists)
+				var fullDir = new DirectoryInfo(Path.Combine(rootDir, unityVersion));
+				if (!fullDir.Exists)
 				{
-					using var client = new HttpClient();
 					try
 					{
-						await using var zipFile = await client.GetStreamAsync(url);
-						using var archive = new ZipArchive(zipFile);
-						dllsDir.Create();
-						foreach (var entry in archive.Entries)
-						{
-							await WriteZippedFile(dllsDir.FullName, entry);
-						}
+						using var system = await DownloadZipFromBepinex("corlibs", unityVersion, httpClient);
+						using var unity = await DownloadZipFromBepinex("libraries", unityVersion, httpClient);
+						fullDir.Create( );
+						await ExtractArchive(system, fullDir);
+						await ExtractArchive(unity, fullDir);
 					}
-					catch (Exception e)
+					catch (HttpRequestException e)
 					{
-						if (unityVersion.StartsWith('.') || !unityVersion.Contains('.'))
+						_ = e;
+						if (!unityVersion.Contains('.'))
 							return null;
-						unityVersion = unityVersion.Remove(unityVersion.LastIndexOf('.'));
+						unityVersion = unityVersion.Remove(unityVersion.Length - 1);
+						if (unityVersion.EndsWith('.'))
+							unityVersion = unityVersion.Remove(unityVersion.Length - 1);
 						continue;
 					}
 				}
 
-				return dllsDir;
+				return fullDir;
 			}
 		}
 
 		private static async Task DownloadDoorstop(string hsDir)
 		{
-			//var dll = new FileInfo(Path.Combine(hsDir, "winhttp.dll"));
-			//if (dll.Exists)
-			//	return;
-
 			var github = new GitHubClient(new ProductHeaderValue("_"));
 			var rel = await github.Repository.Release.GetLatest("NeighTools", "UnityDoorstop");
-			var asset = rel.Assets.Where(a => a.Name.Contains("win")).First(a =>
-				a.Name.Contains(
+			var asset = rel.Assets.Where(a => a.Name.Contains("win")).First(
+				a => a.Name.Contains(
 #if DEBUG
 					"verbose"
 #else
 					"release"
 #endif
 				));
-			//file.BrowserDownloadUrl
-
-			using var client = new HttpClient();
+			using var client = new HttpClient( );
 			await using var zipFile = await client.GetStreamAsync(asset.BrowserDownloadUrl);
 			using var archive = new ZipArchive(zipFile);
-			foreach (var entry in archive.Entries)
-			{
-				if (!entry.Name.EndsWith(".dll"))
-					continue;
-				if (entry.FullName.Contains("x64")) //todo: auto detect it
-					continue;
-
-				await WriteZippedFile(hsDir, entry);
-				break;
-			}
+			var entry = archive.Entries.First(e => e.Name.EndsWith(".dll") && e.FullName.Contains("x86")); //todo: auto detect x64/x86
+			await WriteZippedFile(hsDir, entry);
 		}
 
-		private static void WriteDoorstopConfig(string lib, string hsDir, string dllsDir)
+		private static void WriteDoorstopConfig(string lib, string hsDir, string unstrippedDir)
 		{
+#if DEBUG
+			const string debugTrue = "true";
+#else
+			const string debugTrue = "false";
+#endif
+
 			var file = new INIFile(Path.Combine(hsDir, "doorstop_config.ini"));
 
-			IDictionary<string, string> CreateSection(string name, Action<IDictionary<string, string>> init)
-			{
-				if (file.HasSection(name))
-					return file.GetSection(name);
-
-				file.AddSection(name);
-				var sec = file.GetSection(name);
-				init(sec);
-				return sec;
-			}
-
-			var general = CreateSection("General", (sec) =>
-			{
-				sec["enabled"] = "true";
-				sec["redirect_output_log"] = "false";
-				sec["ignore_disable_switch"] = "false";
-			});
+			var general = file["General"];
+			general["enabled"] = "true";
+			general["redirect_output_log"] = debugTrue;
+			general["ignore_disable_switch"] = "false";
 			general["target_assembly"] = lib;
 
-			var mono = CreateSection("UnityMono", sec =>
-			{
-				sec["debug_address"] = "127.0.0.1:10000";
-				sec["debug_suspend"] = "false";
-			});
-			mono["dll_search_path_override"] = dllsDir;
-#if DEBUG
-			mono["debug_enabled"] = "true";
-#else
-			mono["debug_enabled"] = "false";
-#endif
+			var mono = file["UnityMono"];
+			mono["dll_search_path_override"] = unstrippedDir;
+			mono["debug_enabled"] = debugTrue;
+			mono["debug_address"] = "127.0.0.1:10000";
+			mono["debug_suspend"] = "false";
+
 			file.WrapValueInQuotes = false;
-			file.Persist();
+			file.Persist( );
 		}
 
-		public static void Main(string[] args)
+		private static async Task MainAsync( )
 		{
-			var hs = FindHearthstoneDir();
-			var hsVersion = GetHearthstoneVersion(hs);
+			var hsDir = FindHearthstoneDir( );
+			await DownloadDoorstop(hsDir);
+			var hsVersion = GetHearthstoneVersion(hsDir);
 
-			var doorstop = DownloadDoorstop(hs);
+			var libFile = FindLibDir( );
+			string dllsFolder;
 
-			var lib = FindLibDir();
-			var dllsFolder = Path.Combine(lib.Directory.Parent.FullName, "unity");
-			var dlls = DownloadFullDlls(dllsFolder, hsVersion).Result;
+			if (true || hsDir[0] == libFile.FullName[0]) //hs installed into same drive
+			{
+				dllsFolder = Path.Combine(libFile.Directory.Parent.FullName, "unity");
+			}
+			else
+			{
+				var hsExDir = Path.Combine(hsDir, "hs_ex");
+				var libDir = Path.Combine(hsExDir, libFile.Directory.Name);
+				Directory.CreateDirectory(libDir);
+				foreach (var file in libFile.Directory.EnumerateFiles( ))
+				{
+					var targetFile = Path.Combine(libDir, file.Name);
+					file.CopyTo(targetFile, true);
+				}
 
-			WriteDoorstopConfig(lib.FullName, hs, dlls.FullName);
+				libFile = new(Path.Combine(libDir, libFile.Name));
+				dllsFolder = Path.Combine(hsExDir, "unity");
+			}
 
-			doorstop.Wait();
+			var dlls = await DownloadUnstrippedDlls(dllsFolder, hsVersion);
+
+			WriteDoorstopConfig(libFile.FullName, hsDir, dlls.FullName);
+		}
+
+		public static void Main(string[ ] args)
+		{
+			MainAsync( ).Wait( );
 		}
 	}
 }

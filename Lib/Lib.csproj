@@ -26,7 +26,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -37,7 +37,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <DebugSymbols>true</DebugSymbols>
     <Prefer32Bit>false</Prefer32Bit>
@@ -51,6 +51,7 @@
   <ItemGroup>
     <Compile Include="Entrypoint.cs" />
     <Compile Include="HookInfo.cs" />
+    <Compile Include="Import.cs" />
     <Compile Include="Loader.cs" />
     <Compile Include="Targets\GameState.cs" />
     <Compile Include="Targets\GameStrings.cs" />
@@ -80,382 +81,242 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Assembly-CSharp.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="blizzard.bgsclient">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\blizzard.bgsclient.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="blizzard.bgssdk">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\blizzard.bgssdk.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.Commerce">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.Commerce.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.AppsFlyer">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.AppsFlyer.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.AssetLoader">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.AssetLoader.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.AssetManager">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.AssetManager.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.Configuration">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Configuration.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.Core">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Core.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.ErrorInterface">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.ErrorInterface.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.FontService">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.FontService.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.GameStringsInterface">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.GameStringsInterface.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.GraphicsManagerInterface">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.GraphicsManagerInterface.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.iTween">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.iTween.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.JobQueue">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.JobQueue.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.Localization">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Localization.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.Logging">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Logging.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.MaterialService">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.MaterialService.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.MiniJSON">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.MiniJSON.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.PlayMaker.Runtime">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.PlayMaker.Runtime.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.PlayMakerCustomActions.Runtime">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.PlayMakerCustomActions.Runtime.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.ServiceLocator">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.ServiceLocator.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.UberText.Runtime">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.UberText.Runtime.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.T5.UI.Core">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.UI.Core.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.Telemetry.Identity">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.Telemetry.Identity.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.Telemetry.Sdk">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.Telemetry.Sdk.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Blizzard.Telemetry.StandardProtos.BlizzPbc">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Blizzard.Telemetry.StandardProtos.BlizzPbc.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="com.blizzard.mobile-unity-auth-sdk">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\com.blizzard.mobile-unity-auth-sdk.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="ConditionalExpression">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\ConditionalExpression.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Google.Protobuf">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Google.Protobuf.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="ICSharpCode.SharpZipLib">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\ICSharpCode.SharpZipLib.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Mono.Security">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Mono.Security.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UniTask">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UniTask.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Unity.RenderPipeline.Universal.ShaderLibrary">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Unity.RenderPipeline.Universal.ShaderLibrary.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Unity.RenderPipelines.Core.Runtime">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Unity.RenderPipelines.Universal.Runtime">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Unity.Timeline">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Unity.Timeline.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Unity.ZombieObjectDetector.Runtime">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\Unity.ZombieObjectDetector.Runtime.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.AIModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AIModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.AndroidJNIModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AndroidJNIModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.AudioModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.DirectorModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.DirectorModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.GridModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.GridModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.InputModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.InputModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.JSONSerializeModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.ParticleSystemModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.Physics2DModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.Physics2DModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.ScreenCaptureModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.SharedInternalsModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SharedInternalsModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.SubsystemsModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SubsystemsModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.TerrainModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.TilemapModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TilemapModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UI.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.UIElementsModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UIModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.UnityAnalyticsModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UnityAnalyticsModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestTextureModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.VFXModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.VFXModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.VideoModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.VideoModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.VRModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.VRModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.WindModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.WindModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="UnityEngine.XRModule">
-      <HintPath>C:\Program Files (x86)\Hearthstone\Hearthstone_Data\Managed\UnityEngine.XRModule.dll</HintPath>
-      <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="HarmonyX">
-      <Version>2.10.1</Version>
+      <Version>2.10.2</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Appboy">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Appboy.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
+    <Reference Include="blizzard.bgsclient">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\blizzard.bgsclient.dll</HintPath>
+    </Reference>
+    <Reference Include="blizzard.bgssdk">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\blizzard.bgssdk.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.Commerce.Model.CSharp">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.Commerce.Model.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.Commerce.Wrapper">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.Commerce.Wrapper.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.AppsFlyer">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.AppsFlyer.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.AssetLoader">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.AssetLoader.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.AssetManager">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.AssetManager.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.Configuration">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.Core">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.ErrorInterface">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.ErrorInterface.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.FontService">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.FontService.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.FXBuilder">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.FXBuilder.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.Game">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.GameStringsInterface">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.GameStringsInterface.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.GraphicsManagerInterface">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.GraphicsManagerInterface.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.iTween">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.iTween.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.JobQueue">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.JobQueue.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.Localization">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Localization.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.Logging">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.MaterialService">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.MaterialService.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.MiniJSON">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.MiniJSON.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.PlayMaker.Runtime">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.PlayMaker.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.PlayMakerCustomActions.Runtime">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.PlayMakerCustomActions.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.ServiceLocator">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.ServiceLocator.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.UberText.Runtime">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.UberText.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.T5.UI.Core">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.T5.UI.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.Telemetry.Identity">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.Telemetry.Identity.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.Telemetry.Sdk">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.Telemetry.Sdk.dll</HintPath>
+    </Reference>
+    <Reference Include="Blizzard.Telemetry.StandardProtos.BlizzPbc">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Blizzard.Telemetry.StandardProtos.BlizzPbc.dll</HintPath>
+    </Reference>
+    <Reference Include="com.blizzard.mobile-unity-auth-sdk">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\com.blizzard.mobile-unity-auth-sdk.dll</HintPath>
+    </Reference>
+    <Reference Include="ConditionalExpression">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\ConditionalExpression.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Protobuf">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Google.Protobuf.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Security">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\Mono.Security.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AIModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AndroidJNIModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AndroidJNIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.DirectorModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.DirectorModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.GridModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.GridModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.Physics2DModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.SharedInternalsModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SharedInternalsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.SpriteShapeModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SpriteShapeModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.SubsystemsModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.SubsystemsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TerrainModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextCoreFontEngineModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TextCoreFontEngineModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextCoreTextEngineModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TextCoreTextEngineModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TilemapModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.TilemapModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIElementsModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIElementsNativeModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UIElementsNativeModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityAnalyticsModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestTextureModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.VFXModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.VFXModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.VideoModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.VideoModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.VRModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.VRModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.WindModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.WindModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.XRModule">
+      <HintPath>E:\Apps\Hearthstone\Hearthstone_Data\Managed\UnityEngine.XRModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>start $(OutDir)\net7.0\Installer.exe</PostBuildEvent>
+    <PostBuildEvent>start $(OutDir)\net8.0\Installer.exe</PostBuildEvent>
   </PropertyGroup>
 </Project>

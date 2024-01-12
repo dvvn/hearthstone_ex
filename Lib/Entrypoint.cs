@@ -8,31 +8,32 @@ using System.Runtime.InteropServices;
 namespace Doorstop
 {
 	// ReSharper disable once UnusedMember.Global
-	class Entrypoint
+	internal static class Entrypoint
 	{
 		private static IEnumerable<Type> GetTypesInNamespace(Assembly assembly, string nameSpace)
 		{
-			return
-				assembly.GetTypes()
-					.Where(t => string.Equals(t.Namespace, nameSpace, StringComparison.Ordinal));
+			return assembly.GetTypes( ).Where(t => string.Equals(t.Namespace, nameSpace, StringComparison.Ordinal));
 		}
 
-		[DllImport("User32.dll", CharSet = CharSet.Unicode)]
-		public static extern int MessageBox(IntPtr h, string m, string c, int type);
-
 		// ReSharper disable once UnusedMember.Global
-		public static void Start()
+		public static void Start( )
 		{
-			try
-			{
-				AppDomain.CurrentDomain.FirstChanceException += (sender, eventArgs) => { MessageBox((IntPtr)0, eventArgs.Exception.ToString(), "text", 0); };
-				AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) => { MessageBox((IntPtr)0, eventArgs.ExceptionObject.ToString(), "text", 0); };
-				hearthstone_ex.Loader.Start();
-			}
-			catch (Exception e)
-			{
-				MessageBox((IntPtr)0, e.ToString(), "text", 0);
-			}
+			//try
+			//{
+			//	AppDomain.CurrentDomain.FirstChanceException += (sender, eventArgs) =>
+			//	{
+			//		Import.MessageBox((IntPtr)0, eventArgs.Exception.ToString( ), "Exception", 0);
+			//	};
+			//	AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+			//	{
+			//		Import.MessageBox((IntPtr)0, eventArgs.ExceptionObject.ToString( ), "Unhandled exception", 0);
+			//	};
+			//	hearthstone_ex.Loader.Start( );
+			//}
+			//catch (Exception e)
+			//{
+			//	Import.MessageBox((IntPtr)0, e.ToString( ), "Error", 0);
+			//}
 		}
 	}
 }
