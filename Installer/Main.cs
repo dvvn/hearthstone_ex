@@ -156,7 +156,7 @@ namespace hearthstone_ex
 			await WriteZippedFile(hsDir, entry);
 		}
 
-		private static void WriteDoorstopConfig(string lib, string hsDir, string unstrippedDir)
+		private static void WriteDoorstopConfig(string hsDir, FileInfo Assembly, DirectoryInfo DllSearch)
 		{
 #if DEBUG
 			const string debugTrue = "true";
@@ -170,10 +170,10 @@ namespace hearthstone_ex
 			general["enabled"] = "true";
 			general["redirect_output_log"] = debugTrue;
 			general["ignore_disable_switch"] = "false";
-			general["target_assembly"] = lib;
+			general["target_assembly"] = Assembly.FullName;
 
 			var mono = file["UnityMono"];
-			mono["dll_search_path_override"] = unstrippedDir;
+			mono["dll_search_path_override"] = DllSearch.FullName;
 			mono["debug_enabled"] = debugTrue;
 			mono["debug_address"] = "127.0.0.1:10000";
 			mono["debug_suspend"] = "false";
@@ -211,8 +211,7 @@ namespace hearthstone_ex
 			}
 
 			var dlls = await DownloadUnstrippedDlls(dllsFolder, hsVersion);
-
-			WriteDoorstopConfig(libFile.FullName, hsDir, dlls.FullName);
+			WriteDoorstopConfig(hsDir, libFile, dlls);
 		}
 
 		public static void Main(string[ ] args)
