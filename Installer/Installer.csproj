@@ -6,11 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <BaseOutputPath>$(SolutionDir)bin</BaseOutputPath>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <DebugType>full</DebugType>
   </PropertyGroup>
 
@@ -18,9 +23,14 @@
     <DebugType>full</DebugType>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Octokit" Version="9.1.0" />
-    <PackageReference Include="PeanutButter.INI" Version="3.0.245" />
+    <PackageReference Include="ByteSize" Version="2.1.2" />
+    <PackageReference Include="Octokit" Version="13.0.1" />
+    <PackageReference Include="SharpCompress" Version="0.37.2" />
   </ItemGroup>
 
 </Project>

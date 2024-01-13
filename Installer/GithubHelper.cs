@@ -16,17 +16,9 @@ internal class GithubHelper
 		return await _client.Repository.Release.GetLatest(owner, name);
 	}
 
-	public async Task<string> GetDoorstopUrl( )
+	public async Task<ReleaseAsset> GetAsset(string owner, string name, Func<ReleaseAsset, bool> predicate)
 	{
-		var rel = await GetRelease("NeighTools", "UnityDoorstop");
-		var asset = rel.Assets.Where(a => a.Name.Contains("win")).First(
-			a => a.Name.Contains(
-#if DEBUG
-				"verbose"
-#else
-				"release"
-#endif
-			));
-		return asset.BrowserDownloadUrl;
+		var release = await GetRelease(owner, name);
+		return release.Assets.First(predicate);
 	}
 }

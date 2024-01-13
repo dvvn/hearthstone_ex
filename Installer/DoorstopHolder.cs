@@ -1,95 +1,111 @@
 ﻿using PeanutButter.INI;
 using System.Diagnostics;
-using System.IO.Compression;
-using System.Linq;
+using System.IO;
+using System.Text;
+using ByteSizeLib;
+using SharpCompress.Archives;
+using SharpCompress.Archives.Zip;
+using SharpCompress.Common;
 
 namespace Installer;
 
-public class DoorstopHolder : IDisposable
+internal class DoorstopHolder : IDisposable, IAsyncDisposable
 {
-	private readonly INIFile _cfg;
+	public const string ConfigName = "doorstop_config.ini";
+	public const string DllName = "winhttp.dll";
 
-	private DoorstopHolder(string path)
-	{
-		_cfg = new(path);
-	}
+	public const string ReleaseType =
+#if DEBUG
+			"verbose"
+#else
+			"release"
+#endif
+		;
 
-	public DoorstopHolder(FileInfo dir)
-		: this(dir.FullName)
+	private readonly DirectoryInfo _dir;
+	private readonly List<string> _lines;
+
+	private void ConfigUpdate(string key, object value)
 	{
+		Debug.Assert(_lines.Count(s => s.StartsWith(key)) == 1, "Multiple keys found");
+		var index = _lines.FindIndex(s => s.StartsWith(key));
+		_lines[index] = $"{key}={value}";
 	}
 
 	public DoorstopHolder(DirectoryInfo dir)
 		: this(Path.Combine(dir.FullName, ConfigName))
 	{
+		_dir = dir;
+		_lines = new( );
 	}
-
-	private static bool EqualDebug(string str, FileVersionInfo info)
-	{
-		//info.IsPreRelease
-		if (str.Contains(info.IsDebug ? "verbose" : "release"))
-			return true;
-
-#if DEBUG
-		return str.Contains("verbose");
-#else
-		return str.Contains("release");
-#endif
-	}
-
-	public const string ConfigName = "doorstop_config.ini";
-	public const string DllName = "winhttp.dll";
 
 	public void Dispose( )
 	{
-		_cfg.WrapValueInQuotes = false;
-		_cfg.Persist( );
+		File.WriteAllLines(Path.Combine(_dir.FullName, ConfigName), _lines);
 	}
 
-	//await using var st = entry.Open( );
-	// await using var file = File.Create(Path.Combine(dir.FullName, entry.Name));
-	// await st.CopyToAsync(file);
-
-	public void Write(Stream source)
+	public async ValueTask DisposeAsync( )
 	{
-		using var archive = new ZipArchive(source);
-		var entries = archive.Entries.Where(e => e.FullName.Contains("x86")).ToArray( ); //todo: auto detect x64/x86
+		await File.WriteAllLinesAsync(Path.Combine(_dir.FullName, ConfigName), _lines);
+	}
 
-		var dll = entries.First(e => e.Name.EndsWith(".dll"));
-		Debug.Assert(dll.Name == DllName);
-		var cfg = entries.First(e => e.Name.EndsWith(".ini"));
-		Debug.Assert(cfg.Name == ConfigName);
-		Debug.Assert(_cfg.Path.EndsWith(ConfigName));
-		var dllPath = string.Concat(_cfg.Path.AsSpan(0, _cfg.Path.Length - ConfigName.Length), DllName);
-		dll.ExtractToFile(dllPath, true);
-		Debug.Assert(FileVersionInfo.GetVersionInfo(dllPath).ProductMajorPart >= 4, "Outdated UnityDoorstop");
+	public async Task Update(ZipArchive archive)
+	{
+		var extractionOptions = new ExtractionOptions { ExtractFullPath = false, Overwrite = true };
 
-		var cfgExsists = File.Exists(_cfg.Path);
-		cfg.ExtractToFile(_cfg.Path, cfgExsists);
-		if (cfgExsists)
-			_cfg.Merge(_cfg.Path, MergeStrategies.OnlyAddIfMissing);
+		var entries = archive.Entries.Where(e => e.Size != 0 && e.Key.Contains("x86")).ToArray( ); //todo: auto detect x64/x86
+
+		var dllEntry = entries.First(e => e.Key.EndsWith(".dll"));
+		Debug.Assert(dllEntry.Key.EndsWith(DllName));
+		var configEntry = entries.First(e => e.Key.EndsWith(".ini"));
+		Debug.Assert(configEntry.Key.EndsWith(ConfigName));
+
+		dllEntry.WriteToFile(Path.Combine(_dir.FullName, DllName), extractionOptions);
+
+		StreamReader reader;
+		var configFile = _dir.EnumerateFiles( ).FirstOrDefault(i => i.Name == ConfigName);
+		if (configFile == default)
+		{
+			var stream = new MemoryStream((int)configEntry.Size);
+			configEntry.WriteTo(stream);
+			stream.Seek(0, SeekOrigin.Begin);
+			reader = new(stream);
+		}
 		else
-			_cfg.Reload( );
+		{
+			var text = configFile.OpenRead( );
+			reader = new(text);
+		}
+
+		using (reader)
+		{
+			for (;;)
+			{
+				var line = await reader.ReadLineAsync( );
+				if (line == null)
+					break;
+				_lines.Add(line);
+			}
+		}
 	}
 
-	public void Write(bool isDebug, FileInfo targetAssembly, DirectoryInfo dllSearchPath)
+	public void Write(FileInfo targetAssembly, DirectoryInfo dllSearchPath)
 	{
-		const string trueStr = "true";
-		const string falseStr = "false";
+		//[General]
+		ConfigUpdate("enabled", true);
+		ConfigUpdate("redirect_output_log", true);
+		ConfigUpdate("ignore_disable_switch", false);
+		ConfigUpdate("target_assembly", targetAssembly.FullName);
 
-		var isDebugStr = isDebug ? trueStr : falseStr;
-
-		var general = _cfg["General"];
-		general["enabled"] = trueStr;
-		general["redirect_output_log"] = isDebugStr;
-		general["ignore_disable_switch"] = falseStr;
-		general["target_assembly"] = targetAssembly.FullName;
-
-		var mono = _cfg["UnityMono"];
-		mono["dll_search_path_override"] = dllSearchPath.FullName;
-		mono["debug_enabled"] = isDebugStr;
-		mono["debug_address"] = "127.0.0.1:10000";
-		mono["debug_suspend"] = falseStr;
+		//[UnityMono]
+		ConfigUpdate("dll_search_path_override", dllSearchPath.FullName);
+#if DEBUG
+		ConfigUpdate("debug_enabled", true);
+#else
+		ConfigUpdate("debug_enabled", false);
+#endif
+		ConfigUpdate("debug_address", "127.0.0.1:10000");
+		ConfigUpdate("debug_suspend", false);
 	}
 
 	//NAME_VERSION_.zip

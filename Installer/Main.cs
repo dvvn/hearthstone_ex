@@ -1,67 +1,63 @@
-﻿using System.IO.Compression;
+﻿using System.Diagnostics;
+using System.Linq;
+using SharpCompress.Archives;
+using SharpCompress.Archives.Zip;
 
 namespace Installer;
 
 internal class Installer
 {
-	private static void Gap<T>(T _)
-	{
-	}
-
-	private static async Task WriteZippedFile(DirectoryInfo dir, ZipArchiveEntry entry)
-	{
-		Gap(dir);
-
-		await using var st = entry.Open( );
-		await using var file = File.Create(Path.Combine(dir.FullName, entry.Name));
-		await st.CopyToAsync(file);
-	}
-
-	//ExtractToDirectory
-	private static async Task ExtractArchive(ZipArchive archive, DirectoryInfo dir)
-	{
-#if false
-		foreach (var e in archive.Entries)
-			await WriteZippedFile(dir, e);
-#else
-		await Task.WhenAll(archive.Entries.Select(e => WriteZippedFile(dir, e)));
-#endif
-	}
-
-	private static async Task ExtractArchive(Stream archiveStream, DirectoryInfo dir)
-	{
-		await ExtractArchive(new ZipArchive(archiveStream), dir);
-	}
-
 	private static Uri MakeBepinexUrl(ReadOnlySpan<char> subDir, string unityVersion)
 	{
 		return new($"https://unity.bepinex.dev/{subDir}/{unityVersion}.zip");
 	}
 
+	private static async Task ExtractArchive<T>(DirectoryInfo dir, params Task<T>[ ] archive) where T : IArchive
+	{
+		await Task.WhenAll(
+			archive.SelectMany(
+				t => t.Result.Entries.Select(
+					async e =>
+					{
+						Debug.Assert(e.Key != null);
+						var filePath = Path.Combine(dir.FullName, e.Key);
+						await using var file = e.Size == 0 ? File.Create(filePath) : File.Create(filePath, (int)e.Size);
+						e.WriteTo(file);
+					}))).ConfigureAwait(false);
+	}
+
 	//todo: add code to download from unity servers if bepinex dll doesn't work
-	private static async Task MainAsync( )
+	public static async Task Main(string[ ] args)
 	{
 		var hsInfo = new HearthstoneInfo( );
 		var libInfo = new LibraryInfo( );
 		var gitHelper = new GithubHelper( );
 		var downloadHelper = new DownloadHelper( );
+		await using var doorstopHolder = new DoorstopHolder(hsInfo.Directory);
 
-		var doorstopUrl = new Uri(await gitHelper.GetDoorstopUrl( ));
-		using var doorstop = new DoorstopHolder(hsInfo.Directory);
-		if (!doorstop.CheckVersion(doorstopUrl))
-			doorstop.Write(await downloadHelper.Get(doorstopUrl));
+		var doorstopRelease = await gitHelper.GetAsset(
+								  "NeighTools", "UnityDoorstop",
+								  r => r.Name.Contains("win") && r.Name.Contains(DoorstopHolder.ReleaseType));
+		var doorstopUrl = new Uri(doorstopRelease.BrowserDownloadUrl);
+		await doorstopHolder.Update(ZipArchive.Open(await downloadHelper.Get(doorstopUrl)));
 
 		var unstrippedDir = new DirectoryInfo(Path.Combine(libInfo.Library.Directory.Parent.FullName, "unity", hsInfo.Version.Basic));
+		if (unstrippedDir.Exists)
+		{
+			if (!unstrippedDir.EnumerateFileSystemInfos( ).Any( ))
+				goto _UNSTRIPPED_DIR_CREATED;
+			unstrippedDir.Delete(true);
+		}
+
 		unstrippedDir.Create( );
-		await ExtractArchive(await downloadHelper.Get(MakeBepinexUrl("corlibs", hsInfo.Version.Basic)), unstrippedDir);
-		await ExtractArchive(await downloadHelper.Get(MakeBepinexUrl("libraries", hsInfo.Version.Basic)), unstrippedDir);
 
-		doorstop.Write(true, libInfo.Library, unstrippedDir);
-	}
+	_UNSTRIPPED_DIR_CREATED:
 
-	public static void Main(string[ ] args)
-	{
-		Gap(args);
-		MainAsync( ).Wait( );
+		await ExtractArchive(
+			unstrippedDir,
+			downloadHelper.Get(MakeBepinexUrl("corlibs", hsInfo.Version.Basic)).ContinueWith(t => ZipArchive.Open(t.Result)),
+			downloadHelper.Get(MakeBepinexUrl("libraries", hsInfo.Version.Basic)).ContinueWith(t => ZipArchive.Open(t.Result)));
+
+		doorstopHolder.Write(libInfo.Library, unstrippedDir);
 	}
 }
