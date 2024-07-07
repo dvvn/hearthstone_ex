@@ -27,7 +27,13 @@ internal class LibraryInfo
 	private FileInfo FindLibrary( )
 	{
 		Debug.Assert(_workingDirectory != null);
-		return FindLibrary(_workingDirectory) ?? FindLibrary(_workingDirectory.Parent);
+		
+		for (var dir = _workingDirectory;; dir = dir.Parent)
+		{
+			var lib = FindLibrary(dir);
+			if (lib != null)
+				return lib;
+		}
 	}
 
 	private readonly DirectoryInfo _workingDirectory;

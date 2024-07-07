@@ -1,5 +1,4 @@
-﻿using PeanutButter.INI;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Text;
 using ByteSizeLib;
@@ -33,7 +32,6 @@ internal class DoorstopHolder : IDisposable, IAsyncDisposable
 	}
 
 	public DoorstopHolder(DirectoryInfo dir)
-		: this(Path.Combine(dir.FullName, ConfigName))
 	{
 		_dir = dir;
 		_lines = new( );
@@ -115,19 +113,5 @@ internal class DoorstopHolder : IDisposable, IAsyncDisposable
 		var end = fileName.LastIndexOf('.');
 		var version = fileName.Slice(start, end - start);
 		return version;
-	}
-
-	public bool CheckVersion(Uri url)
-	{
-		var dir = new FileInfo(_cfg.Path).Directory;
-		var dllPath = Path.Combine(dir.FullName, DllName);
-
-		if (!File.Exists(dllPath))
-			return false;
-
-		var fileName = Path.GetFileName(url.LocalPath);
-		var dllInfo = FileVersionInfo.GetVersionInfo(dllPath);
-
-		return EqualDebug(fileName, dllInfo) && ExtractVersion(fileName).SequenceEqual(dllInfo.ProductVersion);
 	}
 }

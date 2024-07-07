@@ -20,6 +20,8 @@ namespace Doorstop
 		// ReSharper disable once UnusedMember.Global
 		public static void Start( )
 		{
+			Import.MessageBox((IntPtr)0, "qqqq", "Unhandled exception", 0);
+
 			try
 			{
 				AppDomain.CurrentDomain.FirstChanceException += (sender, eventArgs) =>
@@ -30,7 +32,7 @@ namespace Doorstop
 				{
 					Import.MessageBox((IntPtr)0, eventArgs.ExceptionObject.ToString( ), "Unhandled exception", 0);
 				};
-				hearthstone_ex.Loader.Start( );
+				//hearthstone_ex.Loader.Start( );
 			}
 			catch (Exception e)
 			{
