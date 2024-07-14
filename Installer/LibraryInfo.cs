@@ -1,47 +1,19 @@
-﻿using System.Diagnostics;
-using System.Reflection;
+﻿using Installer.Helpers;
 
 namespace Installer;
 
-internal class LibraryInfo
+internal class LibraryInfo : FileArchitectureInfo
 {
-	private static readonly string _selfPath = Assembly.GetExecutingAssembly( ).Location;
+	public readonly SimpleFileInfo File;
 
-	public static string GetWorkingDirectory( )
+	private LibraryInfo(FileInfo file)
+		: base(file.FullName)
 	{
-		return Path.GetDirectoryName(_selfPath);
+		File = new(file.FullName);
 	}
-
-	public static FileVersionInfo GetVersion( )
-	{
-		return FileVersionInfo.GetVersionInfo(_selfPath);
-	}
-
-	private const string LibraryName = "hearthstone_ex.dll";
-
-	private static FileInfo FindLibrary(DirectoryInfo dir)
-	{
-		return dir.EnumerateFiles( ).FirstOrDefault(file => file.Name == LibraryName);
-	}
-
-	private FileInfo FindLibrary( )
-	{
-		Debug.Assert(_workingDirectory != null);
-		
-		for (var dir = _workingDirectory;; dir = dir.Parent)
-		{
-			var lib = FindLibrary(dir);
-			if (lib != null)
-				return lib;
-		}
-	}
-
-	private readonly DirectoryInfo _workingDirectory;
-	public readonly FileInfo Library;
 
 	public LibraryInfo( )
+		: this(Utils.FindInParentDirectory(Utils.GetWorkingDirectory( ), "hearthstone_ex.dll"))
 	{
-		_workingDirectory = new(GetWorkingDirectory( ));
-		Library = FindLibrary( );
 	}
 }

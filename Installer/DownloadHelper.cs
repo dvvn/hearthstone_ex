@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using System.Net;
+using System.Diagnostics;
+using Installer.Helpers;
 
 namespace Installer;
 
@@ -26,18 +29,45 @@ internal class DownloadHelper : IDisposable
 #endif
 	}
 
-	public async Task<bool> FileExist(Uri url)
+	private async Task<HttpResponseMessage> Send(Uri url)
 	{
 		using var request = new HttpRequestMessage(HttpMethod.Head, url);
-		using var response = await _client.SendAsync(request);
+		return await _client.SendAsync(request);
+	}
+
+	public async Task<bool> FileExist(Uri url)
+	{
+		using var response = await Send(url);
 		return response.StatusCode == HttpStatusCode.OK;
 	}
 
 	public async Task<long> GetFileSize(Uri url)
 	{
-		var message = new HttpRequestMessage(HttpMethod.Head, url);
-		var response = await _client.SendAsync(message);
+		using var response = await Send(url);
 		response.EnsureSuccessStatusCode( );
 		return response.Content.Headers.ContentLength.Value;
+	}
+
+	//----------
+
+	public async Task Get(UnstrippedDirectory unstrippedDirectory)
+	{
+		var directory = unstrippedDirectory.ToString( );
+		var directoryInfo = new DirectoryInfo(directory);
+		if (directoryInfo.Exists && directoryInfo.EnumerateFiles( ).Any( ))
+			return;
+
+		var archive = new ZipArchive(await Get(unstrippedDirectory.GetUrl( )));
+#if DEBUG
+		foreach (var e in archive.Entries)
+			Debug.Assert(e.Name == e.FullName);
+#endif
+		directoryInfo.Create( );
+		await Task.WhenAll(archive.Entries.Select(e => e.WriteTo(Path.Combine(directory, e.Name))));
+	}
+
+	public async Task<Stream> Get(Octokit.ReleaseAsset asset)
+	{
+		return await Get(new Uri(asset.BrowserDownloadUrl));
 	}
 }

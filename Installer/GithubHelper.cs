@@ -8,7 +8,7 @@ internal class GithubHelper
 
 	public GithubHelper( )
 	{
-		_client = new(new ProductHeaderValue("_"));
+		_client = new(new ProductHeaderValue(DateTime.Now.Ticks.ToString( )));
 	}
 
 	public async Task<Release> GetRelease(string owner, string name)

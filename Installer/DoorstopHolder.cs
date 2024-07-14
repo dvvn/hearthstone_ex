@@ -1,18 +1,11 @@
 ﻿using System.Diagnostics;
-using System.IO;
-using System.Text;
-using ByteSizeLib;
-using SharpCompress.Archives;
-using SharpCompress.Archives.Zip;
-using SharpCompress.Common;
+using System.IO.Compression;
+using Installer.Helpers;
 
 namespace Installer;
 
-internal class DoorstopHolder : IDisposable, IAsyncDisposable
+internal class DoorstopHolder : IAsyncDisposable
 {
-	public const string ConfigName = "doorstop_config.ini";
-	public const string DllName = "winhttp.dll";
-
 	public const string ReleaseType =
 #if DEBUG
 			"verbose"
@@ -21,82 +14,71 @@ internal class DoorstopHolder : IDisposable, IAsyncDisposable
 #endif
 		;
 
-	private readonly DirectoryInfo _dir;
-	private readonly List<string> _lines;
+	private readonly SimpleFileInfo _configSimpleFile, _dllSimpleFile;
+
+	private MemoryStream _dllData;
+	private List<string> _configData;
 
 	private void ConfigUpdate(string key, object value)
 	{
-		Debug.Assert(_lines.Count(s => s.StartsWith(key)) == 1, "Multiple keys found");
-		var index = _lines.FindIndex(s => s.StartsWith(key));
-		_lines[index] = $"{key}={value}";
+		Debug.Assert(_configData.Count(s => s.StartsWith(key)) == 1, "Multiple keys found");
+		var index = _configData.FindIndex(s => s.StartsWith(key));
+		_configData[index] = $"{key}={value}";
 	}
 
-	public DoorstopHolder(DirectoryInfo dir)
+	public DoorstopHolder(string gameDirectory)
 	{
-		_dir = dir;
-		_lines = new( );
+		_configSimpleFile = new(Path.Combine(gameDirectory, "doorstop_config.ini"));
+		_dllSimpleFile = new(Path.Combine(gameDirectory, "winhttp.dll"));
 	}
 
-	public void Dispose( )
+	public DoorstopHolder(ReadOnlySpan<char> gameDirectory)
+		: this(gameDirectory.ToString( ))
 	{
-		File.WriteAllLines(Path.Combine(_dir.FullName, ConfigName), _lines);
 	}
 
 	public async ValueTask DisposeAsync( )
 	{
-		await File.WriteAllLinesAsync(Path.Combine(_dir.FullName, ConfigName), _lines);
+		await using var fileStream = new FileStream(_dllSimpleFile.FullName, FileMode.Create, FileAccess.Write);
+		await _dllData.CopyToAsync(fileStream);
+
+		await File.WriteAllLinesAsync(_configSimpleFile.FullName, _configData);
 	}
 
-	public async Task Update(ZipArchive archive)
+	private async Task UpdateDllFile(IEnumerable<ZipArchiveEntry> entries)
 	{
-		var extractionOptions = new ExtractionOptions { ExtractFullPath = false, Overwrite = true };
+		var targetEntry = entries.First(e => e.HasExtension(_dllSimpleFile.Extension));
+		Debug.Assert(targetEntry.Name == _dllSimpleFile.Name);
 
-		var entries = archive.Entries.Where(e => e.Size != 0 && e.Key.Contains("x86")).ToArray( ); //todo: auto detect x64/x86
-
-		var dllEntry = entries.First(e => e.Key.EndsWith(".dll"));
-		Debug.Assert(dllEntry.Key.EndsWith(DllName));
-		var configEntry = entries.First(e => e.Key.EndsWith(".ini"));
-		Debug.Assert(configEntry.Key.EndsWith(ConfigName));
-
-		dllEntry.WriteToFile(Path.Combine(_dir.FullName, DllName), extractionOptions);
-
-		StreamReader reader;
-		var configFile = _dir.EnumerateFiles( ).FirstOrDefault(i => i.Name == ConfigName);
-		if (configFile == default)
-		{
-			var stream = new MemoryStream((int)configEntry.Size);
-			configEntry.WriteTo(stream);
-			stream.Seek(0, SeekOrigin.Begin);
-			reader = new(stream);
-		}
-		else
-		{
-			var text = configFile.OpenRead( );
-			reader = new(text);
-		}
-
-		using (reader)
-		{
-			for (;;)
-			{
-				var line = await reader.ReadLineAsync( );
-				if (line == null)
-					break;
-				_lines.Add(line);
-			}
-		}
+		_dllData = await targetEntry.WriteToMemory( );
 	}
 
-	public void Write(FileInfo targetAssembly, DirectoryInfo dllSearchPath)
+	private async Task UpdateConfigData(IEnumerable<ZipArchiveEntry> entries)
+	{
+		var targetEntry = entries.First(e => e.HasExtension(_configSimpleFile.Extension));
+		Debug.Assert(targetEntry.Name == _configSimpleFile.Name);
+
+		using var reader = new StreamReader(await targetEntry.WriteToMemory( ));
+		var lines = await reader.ReadToEndAsync( );
+		_configData = new(lines.Split(Environment.NewLine /*, StringSplitOptions.RemoveEmptyEntries*/));
+	}
+
+	public async Task Update(ZipArchive archive, string architecture)
+	{
+		var entries = archive.Entries.Where(e => e.Length != 0 && e.FullName.StartsWith(architecture)).ToArray( );
+		await Task.WhenAll(UpdateDllFile(entries), UpdateConfigData(entries));
+	}
+
+	public void Write(string targetAssemblyPath, string dllSearchPath)
 	{
 		//[General]
 		ConfigUpdate("enabled", true);
 		ConfigUpdate("redirect_output_log", true);
 		ConfigUpdate("ignore_disable_switch", false);
-		ConfigUpdate("target_assembly", targetAssembly.FullName);
+		ConfigUpdate("target_assembly", targetAssemblyPath);
 
 		//[UnityMono]
-		ConfigUpdate("dll_search_path_override", dllSearchPath.FullName);
+		ConfigUpdate("dll_search_path_override", dllSearchPath);
 #if DEBUG
 		ConfigUpdate("debug_enabled", true);
 #else
