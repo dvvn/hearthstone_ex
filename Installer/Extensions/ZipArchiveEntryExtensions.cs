@@ -1,33 +1,32 @@
 ﻿using System.IO.Compression;
 
-namespace Installer.Helpers;
+namespace Installer.Extensions;
 
 internal static class ZipArchiveEntryExtensions
 {
 	public static async Task WriteTo(this ZipArchiveEntry entry, Stream stream)
 	{
 		var pos = stream.Position;
-
-		uint errorCount = 3;
-		do
+		InvalidDataException exception = null;
+		for (;;)
 		{
 			try
 			{
-				await using var entryStream = entry.Open( );
+				await using var entryStream = (DeflateStream)entry.Open( );
 				await entryStream.CopyToAsync(stream);
-				errorCount = 0;
+				break;
 			}
-			catch (InvalidDataException _)
+			catch (InvalidDataException ex)
 			{
-				if (--errorCount == 0)
-					throw;
+				if (exception != null)
+					throw exception;
+				exception = ex;
 			}
 			finally
 			{
 				stream.Seek(pos, SeekOrigin.Begin);
 			}
 		}
-		while (errorCount != 0);
 	}
 
 	public static async Task WriteTo(this ZipArchiveEntry entry, string path)
