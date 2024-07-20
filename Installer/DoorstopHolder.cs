@@ -16,11 +16,14 @@ internal class DoorstopHolder : IAsyncDisposable
 
 	private readonly SimpleFileInfo _configSimpleFile, _dllSimpleFile;
 
+	private readonly IList<IDisposable> _updateSources;
+
 	private Stream _dllData;
 	private IList<string> _configData;
 
 	public DoorstopHolder(string gameDirectory)
 	{
+		_updateSources = new List<IDisposable>(1);
 		_configSimpleFile = MakeFileInfo("doorstop_config", "ini");
 		_dllSimpleFile = MakeFileInfo("winhttp", "dll");
 
@@ -43,12 +46,16 @@ internal class DoorstopHolder : IAsyncDisposable
 
 		await File.WriteAllLinesAsync(_configSimpleFile.FullName, _configData);
 
-		_configData = null;
+		//_configData = null;
 		await _dllData.DisposeAsync( );
+		foreach (var src in _updateSources)
+			src.Dispose( );
 	}
 
 	public async Task Update(ZipArchive archive, string architecture)
 	{
+		_updateSources.Add(archive);
+
 		var entries = archive.Entries.Where(e => e.Length != 0 && e.FullName.StartsWith(architecture)).ToArray( );
 
 		_dllData = OpenEntry(_dllSimpleFile);
