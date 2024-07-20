@@ -5,7 +5,7 @@ internal class SimpleFileInfo
 	private readonly int _nameOffset, _extensionOffset;
 
 	public readonly string FullName;
-	public ReadOnlySpan<char> Directory => FullName.AsSpan( ).Slice(0, _nameOffset);
+	public ReadOnlySpan<char> Directory => FullName.AsSpan( ).Slice(0, _nameOffset - 1);
 	public ReadOnlySpan<char> Name => FullName.AsSpan( ).Slice(_nameOffset /*, _extensionOffset - _nameOffset*/);
 	public ReadOnlySpan<char> Extension => FullName.AsSpan( ).Slice(_extensionOffset);
 

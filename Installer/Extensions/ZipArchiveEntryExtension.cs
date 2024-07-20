@@ -2,7 +2,7 @@
 
 namespace Installer.Extensions;
 
-internal static class ZipArchiveEntryExtensions
+internal static class ZipArchiveEntryExtension
 {
 	public static async Task WriteTo(this ZipArchiveEntry entry, Stream stream)
 	{
@@ -12,7 +12,7 @@ internal static class ZipArchiveEntryExtensions
 		{
 			try
 			{
-				await using var entryStream = (DeflateStream)entry.Open( );
+				await using var entryStream = entry.Open( );
 				await entryStream.CopyToAsync(stream);
 				break;
 			}
@@ -42,8 +42,5 @@ internal static class ZipArchiveEntryExtensions
 		return stream;
 	}
 
-	public static bool HasExtension(this ZipArchiveEntry entry, ReadOnlySpan<char> extension)
-	{
-		return Path.GetExtension(entry.FullName.AsSpan( )).SequenceEqual(extension);
-	}
+	
 }

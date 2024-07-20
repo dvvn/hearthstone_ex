@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using Installer.Extensions;
 using Installer.Helpers;
@@ -14,45 +13,50 @@ internal class Installer
 		await Run( );
 	}
 
-	[SuppressMessage("ReSharper", "AccessToDisposedClosure")]
 	private static async Task Run( )
 	{
 		var hsFile = new SimpleFileInfo(Path.Combine(Utils.GetHearthstoneDirectory( ), "Hearthstone.exe"));
-		var hsVersion = new UnityVersion(FileVersionInfo.GetVersionInfo(hsFile.FullName));
+		var hsUnityInfo = new UnityExecutableInfo(hsFile.FullName);
+		var hsUnityVersion = hsUnityInfo.FileVersion.ToString( );
 
 		var libFile = Utils.FindInParentDirectory(Utils.GetWorkingDirectory( ), "hearthstone_ex.dll");
 		var libArch = Utils.GetFileArchitecture(libFile.FullName);
 
 		Debug.Assert(Utils.GetFileArchitecture(hsFile.FullName) == libArch);
 
-		var gitClient = new GitHubClient(new ProductHeaderValue(DateTime.Now.Ticks.ToString( )));
 		using var httpClient = new HttpClient( );
 		await using var doorstopHolder = new DoorstopHolder(hsFile.Directory);
 
 		await doorstopHolder.Update(await GetDoorstopArchive( ), libArch);
-		await WriteDoorstopConfig( );
+		var unstrippedDLLs = await FindUnstrippedDLLs( );
+		doorstopHolder.Write(libFile.FullName, unstrippedDLLs);
 
 		async Task<ZipArchive> GetDoorstopArchive( )
 		{
+			var gitClient = new GitHubClient(new ProductHeaderValue(DateTime.Now.Ticks.ToString( )));
+
 			var doorstopRelease = await gitClient.Repository.Release.GetLatest("NeighTools", "UnityDoorstop");
 			var doorstopReleaseAsset = doorstopRelease.Assets.First(r => r.Name.Contains("win") && r.Name.Contains(DoorstopHolder.ReleaseType));
 			var stream = await httpClient.GetStreamAsync(doorstopReleaseAsset.BrowserDownloadUrl);
 			return new(stream);
 		}
 
-		async Task WriteDoorstopConfig( )
+		async Task<string> FindUnstrippedDLLs( )
 		{
-			var rootDir = Utils.FindParentDirectory(libFile.Directory, "bin");
-			var unityDir = Path.Combine(rootDir.FullName, "unity");
+			//todo: check for unity installed. if true, use dlls from there
+
+			var unityLocalDir = Path.Combine(Utils.FindParentDirectory(libFile.Directory, "bin").ToString( ), "unity");
 
 			var corLibs = MakeUnstripHelper("corlibs");
 			var unityLibs = MakeUnstripHelper("libraries");
 
 			await Task.WhenAll(httpClient.Download(corLibs), httpClient.Download(unityLibs));
 
-			doorstopHolder.Write(libFile.FullName, string.Join(';', corLibs, unityLibs));
+			return string.Join(';', corLibs, unityLibs);
 
-			UnstripHelper MakeUnstripHelper(string type) => new(unityDir, type, hsVersion.Number);
+			//---
+
+			UnstripHelper MakeUnstripHelper(string type) => new(unityLocalDir, type, hsUnityVersion);
 		}
 	}
 }

@@ -5,9 +5,9 @@ internal class UnstripHelper
 	private readonly string _directory;
 	private readonly string _downloadUrl;
 
-	public UnstripHelper(string rootDirectory, string type, ReadOnlySpan<char> version)
+	public UnstripHelper(string rootDirectory, string type, string version)
 	{
-		_directory = Path.Combine(rootDirectory, type, version.ToString( ));
+		_directory = Path.Combine(rootDirectory, type, version);
 		_downloadUrl = $"https://unity.bepinex.dev/{type}/{version}.zip";
 	}
 

@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
-using Installer.Extensions;
 using Installer.Helpers;
 
 namespace Installer;
@@ -22,12 +21,14 @@ internal class DoorstopHolder : IAsyncDisposable
 
 	public DoorstopHolder(string gameDirectory)
 	{
-		_configSimpleFile = new(CombinePath("doorstop_config.ini"));
-		_dllSimpleFile = new(CombinePath("winhttp.dll"));
+		_configSimpleFile = MakeFileInfo("doorstop_config", "ini");
+		_dllSimpleFile = MakeFileInfo("winhttp", "dll");
 
-		return;
-
-		string CombinePath(string fileName) => Path.Combine(gameDirectory, fileName);
+		SimpleFileInfo MakeFileInfo(string fileName, string extension)
+		{
+			var absFileName = string.Concat(fileName, '.', extension);
+			return new(Path.Combine(gameDirectory, absFileName), absFileName.Length, 1 + extension.Length);
+		}
 	}
 
 	public DoorstopHolder(ReadOnlySpan<char> gameDirectory)
@@ -58,8 +59,8 @@ internal class DoorstopHolder : IAsyncDisposable
 
 		Stream OpenEntry(SimpleFileInfo info)
 		{
-			var targetEntry = entries.First(e => e.HasExtension(info.Extension));
-			Debug.Assert(targetEntry.Name == info.Name);
+			var targetEntry = entries.First(e => e.FullName.AsSpan( ).EndsWith(info.Extension));
+			Debug.Assert(info.Name.SequenceEqual(targetEntry.Name));
 			return targetEntry.Open( );
 		}
 	}
@@ -77,7 +78,7 @@ internal class DoorstopHolder : IAsyncDisposable
 #if DEBUG
 		UpdateConfig("debug_enabled", true);
 #else
-		ConfigUpdate("debug_enabled", false);
+		UpdateConfig("debug_enabled", false);
 #endif
 		UpdateConfig("debug_address", "127.0.0.1:10000");
 		UpdateConfig("debug_suspend", false);

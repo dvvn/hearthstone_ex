@@ -16,17 +16,20 @@ internal static class Utils
 			return lib;
 		}
 
-		throw new DllNotFoundException($"Unable to find ${fileName}!");
+		throw new FileNotFoundException($"Unable to find ${fileName}!");
 	}
 
 	public static SimpleFileInfo FindInParentDirectory(string dir, string fileName)
 	{
-		var lib = Directory.EnumerateFiles(dir, fileName).FirstOrDefault(file => Path.GetFileName(file.AsSpan( )).SequenceEqual(fileName));
-		if (lib != default)
-			return new(lib);
+		for (var tmpDir = Path.TrimEndingDirectorySeparator(dir); tmpDir != null; tmpDir = Path.GetDirectoryName(tmpDir))
+		{
+			var lib = Directory.EnumerateFiles(tmpDir).FirstOrDefault(file => Path.GetFileName(file.AsSpan( )).SequenceEqual(fileName));
+			if (lib == default)
+				continue;
+			return new(lib, fileName);
+		}
 
-		var lib2 = FindInParentDirectory(Directory.GetParent(dir), fileName);
-		return new(lib2.FullName, lib2.Name /*, lib2.Extension.Length*/);
+		throw new FileNotFoundException($"Unable to find ${fileName}!");
 	}
 
 	public static DirectoryInfo FindParentDirectory(DirectoryInfo dir, string directoryName)
@@ -40,14 +43,21 @@ internal static class Utils
 		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
 	}
 
-	public static DirectoryInfo FindParentDirectory(string dir, string directoryName)
+	public static ReadOnlySpan<char> FindParentDirectory(ReadOnlySpan<char> dir, string directoryName)
 	{
-		return FindParentDirectory(new DirectoryInfo(dir), directoryName);
+		for (var tmpDir = Path.TrimEndingDirectorySeparator(dir); tmpDir != null; tmpDir = Path.GetDirectoryName(tmpDir))
+		{
+			if (Path.GetFileName(tmpDir).SequenceEqual(directoryName))
+				return tmpDir;
+		}
+
+		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
 	}
 
-	public static DirectoryInfo FindParentDirectory(ReadOnlySpan<char> dir, string directoryName)
+	[Obsolete]
+	public static string FindParentDirectory(string dir, string directoryName)
 	{
-		return FindParentDirectory(dir.ToString( ), directoryName);
+		return FindParentDirectory(dir.AsSpan( ), directoryName).ToString( );
 	}
 
 	public static string GetWorkingDirectory( )
