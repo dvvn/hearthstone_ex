@@ -1,8 +1,9 @@
 ﻿using System.Reflection;
 using System.Reflection.PortableExecutable;
+using Installer.Helpers;
 using Microsoft.Win32;
 
-namespace Installer.Helpers;
+namespace Installer;
 
 internal static class Utils
 {
@@ -66,46 +67,47 @@ internal static class Utils
 		return Path.GetDirectoryName(selfPath);
 	}
 
-	public static string GetHearthstoneDirectory( )
+	public static string GetInstallDirectory(string applicationName)
 	{
-		return FromWOW64( ) ?? FromUninstall( );
+		return TryGetKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall") ?? //
+			   TryGetKeyEx(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall") ??
+			   throw new FileNotFoundException($"Unable to find install directory for {applicationName}");
 
-		//----
-
-		string FromWOW64( )
+		string TryGetKey(string subKeyPath)
 		{
-			using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Hearthstone");
-			if (key != null)
-			{
-				if (key.GetValue("InstallLocation") is string install)
-				{
-					return install;
-				}
-			}
+			var keyName = Path.Combine(subKeyPath, applicationName);
+			using var root = Registry.LocalMachine.OpenSubKey(keyName);
+			return root != null ? GetInstallSource(root) : null;
+		}
 
-			//throw new DllNotFoundException("Failed to retrieve install location from WOW6432Node registry.");
+		string TryGetKeyEx(string subKeyPath)
+		{
+			using var root = Registry.LocalMachine.OpenSubKey(subKeyPath);
+			if (root != null)
+				foreach (var subkeyName in root.GetSubKeyNames( ))
+				{
+					using var key = root.OpenSubKey(subkeyName);
+					if (key == null)
+						continue;
+					if (key.GetValue("DisplayName") is not string name)
+						continue;
+					if (!name.Contains(applicationName))
+						continue;
+					var installSource = GetInstallSource(key);
+					if (installSource == null)
+						continue;
+					return installSource;
+				}
+
 			return null;
 		}
 
-		string FromUninstall( )
+		string GetInstallSource(RegistryKey key)
 		{
-			using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
-			if (key != null)
-			{
-				foreach (var subkeyName in key.GetSubKeyNames( ))
-				{
-					using var subkey = key.OpenSubKey(subkeyName);
-					if (subkey == null)
-						continue;
-					if (subkey.GetValue("DisplayName") is not string name || !name.Contains("Hearthstone"))
-						continue;
-					if (subkey.GetValue("InstallSource") is not string install)
-						continue;
-					return install;
-				}
-			}
-
-			//throw new DllNotFoundException("Failed to retrieve install location from Uninstall registry.");
+			if (key.GetValue("InstallSource") is string installSource)
+				return installSource;
+			if (key.GetValue("InstallLocation") is string installLocation)
+				return installLocation;
 			return null;
 		}
 	}

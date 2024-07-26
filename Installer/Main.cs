@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using Installer.Extensions;
 using Installer.Helpers;
+using Installer.Objects;
 using Octokit;
 
 namespace Installer;
@@ -15,7 +16,7 @@ internal class Installer
 
 	private static async Task Run( )
 	{
-		var hsFile = new SimpleFileInfo(Path.Combine(Utils.GetHearthstoneDirectory( ), "Hearthstone.exe"));
+		var hsFile = new SimpleFileInfo(Path.Combine(Utils.GetInstallDirectory("Hearthstone"), "Hearthstone.exe"));
 		var hsUnityInfo = new UnityExecutableInfo(hsFile.FullName);
 		var hsUnityVersion = hsUnityInfo.FileVersion.ToString( );
 
@@ -53,8 +54,6 @@ internal class Installer
 			await Task.WhenAll(httpClient.Download(corLibs), httpClient.Download(unityLibs));
 
 			return string.Join(';', corLibs, unityLibs);
-
-			//---
 
 			UnstripHelper MakeUnstripHelper(string type) => new(unityLocalDir, type, hsUnityVersion);
 		}
