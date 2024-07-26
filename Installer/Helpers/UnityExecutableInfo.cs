@@ -52,4 +52,9 @@ internal readonly struct UnityExecutableInfo
 		_buildTypeLength = lastPart.LastIndexOfAnyExcept("abrf") - 1;
 		_buildTypeOffset = lastPartIndex + (lastPart.Length - _buildTypeLength);
 	}
+
+	public UnityExecutableInfo(ReadOnlySpan<char> filePath)
+		: this(filePath.ToString( ))
+	{
+	}
 }

@@ -7,44 +7,78 @@ namespace Installer;
 
 internal static class Utils
 {
-	public static FileInfo FindInParentDirectory(DirectoryInfo dir, string fileName)
+	public static FileInfo FindInParentDirectory(DirectoryInfo dir, ReadOnlySpan<char> fileName)
 	{
 		for (; dir != null; dir = dir.Parent)
 		{
-			var lib = dir.EnumerateFiles( ).FirstOrDefault(file => file.Name == fileName);
-			if (lib == default)
-				continue;
-			return lib;
+			foreach (var file in dir.EnumerateFiles( ))
+			{
+				if (fileName.SequenceEqual(file.Name))
+				{
+					return file;
+				}
+			}
 		}
 
-		throw new FileNotFoundException($"Unable to find ${fileName}!");
+		throw new FileNotFoundException($"Unable to find {fileName}!");
 	}
 
-	public static SimpleFileInfo FindInParentDirectory(string dir, string fileName)
+	public static SimpleFileInfo FindInParentDirectory(SimpleDirectoryInfo dir, ReadOnlySpan<char> fileName)
+	{
+		for (; dir != null; dir = dir.Parent)
+		{
+			foreach (var file in dir.EnumerateFiles( ))
+			{
+				if (fileName.SequenceEqual(file.Name))
+				{
+					return file;
+				}
+			}
+		}
+
+		throw new FileNotFoundException($"Unable to find {fileName}!");
+	}
+
+	public static SimpleFileInfo FindInParentDirectory(ReadOnlySpan<char> dir, ReadOnlySpan<char> fileName)
 	{
 		for (var tmpDir = Path.TrimEndingDirectorySeparator(dir); tmpDir != null; tmpDir = Path.GetDirectoryName(tmpDir))
 		{
-			var lib = Directory.EnumerateFiles(tmpDir).FirstOrDefault(file => Path.GetFileName(file.AsSpan( )).SequenceEqual(fileName));
-			if (lib == default)
-				continue;
-			return new(lib, fileName);
+			foreach (var file in Directory.EnumerateFiles(tmpDir.ToString( )))
+			{
+				if (Path.GetFileName(file.AsSpan( )).SequenceEqual(fileName))
+				{
+					return new(file, fileName);
+				}
+			}
 		}
 
-		throw new FileNotFoundException($"Unable to find ${fileName}!");
+		throw new FileNotFoundException($"Unable to find {fileName}!");
 	}
 
-	public static DirectoryInfo FindParentDirectory(DirectoryInfo dir, string directoryName)
+	public static DirectoryInfo FindParentDirectory(DirectoryInfo dir, ReadOnlySpan<char> directoryName)
 	{
 		for (; dir != null; dir = dir.Parent)
 		{
-			if (dir.Name == directoryName)
+			if (directoryName.SequenceEqual(dir.Name))
 				return dir;
 		}
 
 		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
 	}
 
-	public static ReadOnlySpan<char> FindParentDirectory(ReadOnlySpan<char> dir, string directoryName)
+	public static SimpleDirectoryInfo FindParentDirectory(SimpleDirectoryInfo dir, ReadOnlySpan<char> directoryName)
+	{
+		for (; dir != null; dir = dir.Parent)
+		{
+			if (directoryName.SequenceEqual(dir.Name))
+				return dir;
+		}
+
+		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
+	}
+
+	[Obsolete]
+	public static ReadOnlySpan<char> FindParentDirectory(ReadOnlySpan<char> dir, ReadOnlySpan<char> directoryName)
 	{
 		for (var tmpDir = Path.TrimEndingDirectorySeparator(dir); tmpDir != null; tmpDir = Path.GetDirectoryName(tmpDir))
 		{
@@ -55,16 +89,16 @@ internal static class Utils
 		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
 	}
 
-	[Obsolete]
-	public static string FindParentDirectory(string dir, string directoryName)
-	{
-		return FindParentDirectory(dir.AsSpan( ), directoryName).ToString( );
-	}
-
 	public static string GetWorkingDirectory( )
 	{
 		var selfPath = Assembly.GetExecutingAssembly( ).Location;
 		return Path.GetDirectoryName(selfPath);
+	}
+
+	public static ReadOnlySpan<char> GetWorkingDirectoryAsSpan( )
+	{
+		var selfPath = Assembly.GetExecutingAssembly( ).Location;
+		return Path.GetDirectoryName(selfPath.AsSpan( ));
 	}
 
 	public static string GetInstallDirectory(string applicationName)
@@ -138,5 +172,72 @@ internal static class Utils
 		}
 
 		throw new InvalidOperationException("Unable to determine the architecture of the File.");
+	}
+
+	public static string GetFileArchitecture(ReadOnlySpan<char> filePath)
+	{
+		return GetFileArchitecture(filePath.ToString( ));
+	}
+}
+
+internal static class PathEx
+{
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2)
+	{
+		var path1EndsInSeparator = Path.EndsInDirectorySeparator(path1);
+		var path2StartsInSeparator = path2.Length > 0 && path2[0] == Path.DirectorySeparatorChar;
+
+		var combinedLength = path1.Length + path2.Length + (path1EndsInSeparator || path2StartsInSeparator ? 0 : 1);
+		var result = new char[combinedLength];
+
+		path1.CopyTo(result.AsSpan(0, path1.Length));
+		var index = path1.Length;
+
+		if (!path1EndsInSeparator && !path2StartsInSeparator)
+		{
+			result[index] = Path.DirectorySeparatorChar;
+			index++;
+		}
+
+		path2.CopyTo(result.AsSpan(index, path2.Length));
+
+		return new(result);
+	}
+
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3)
+	{
+		var path1EndsInSeparator = Path.EndsInDirectorySeparator(path1);
+		var path2EndsInSeparator = Path.EndsInDirectorySeparator(path2);
+		var path2StartsInSeparator = path2.Length > 0 && path2[0] == Path.DirectorySeparatorChar;
+		var path3StartsInSeparator = path3.Length > 0 && path3[0] == Path.DirectorySeparatorChar;
+
+		var combinedLength = path1.Length + path2.Length + path3.Length;
+		if (!path1EndsInSeparator && !path2StartsInSeparator) combinedLength++;
+		if (!path2EndsInSeparator && !path3StartsInSeparator) combinedLength++;
+
+		var result = new char[combinedLength];
+		var index = 0;
+
+		path1.CopyTo(result.AsSpan(index, path1.Length));
+		index += path1.Length;
+
+		if (!path1EndsInSeparator && !path2StartsInSeparator)
+		{
+			result[index] = Path.DirectorySeparatorChar;
+			index++;
+		}
+
+		path2.CopyTo(result.AsSpan(index, path2.Length));
+		index += path2.Length;
+
+		if (!path2EndsInSeparator && !path3StartsInSeparator)
+		{
+			result[index] = Path.DirectorySeparatorChar;
+			index++;
+		}
+
+		path3.CopyTo(result.AsSpan(index, path3.Length));
+
+		return new(result);
 	}
 }

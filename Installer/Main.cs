@@ -20,10 +20,10 @@ internal class Installer
 		var hsUnityInfo = new UnityExecutableInfo(hsFile.FullName);
 		var hsUnityVersion = hsUnityInfo.FileVersion.ToString( );
 
-		var libFile = Utils.FindInParentDirectory(Utils.GetWorkingDirectory( ), "hearthstone_ex.dll");
+		var libFile = Utils.FindInParentDirectory(Utils.GetWorkingDirectoryAsSpan( ), "hearthstone_ex.dll");
 		var libArch = Utils.GetFileArchitecture(libFile.FullName);
 
-		Debug.Assert(Utils.GetFileArchitecture(hsFile.FullName) == libArch);
+		Debug.Assert(Utils.GetFileArchitecture(hsFile.FullName).SequenceEqual(libArch));
 
 		using var httpClient = new HttpClient( );
 		await using var doorstopHolder = new DoorstopHolder(hsFile.Directory);
@@ -46,7 +46,7 @@ internal class Installer
 		{
 			//todo: check for unity installed. if true, use dlls from there
 
-			var unityLocalDir = Path.Combine(Utils.FindParentDirectory(libFile.Directory, "bin").ToString( ), "unity");
+			var unityLocalDir = PathEx.Combine(Utils.FindParentDirectory(libFile.Directory.FullName, "bin"), "unity");
 
 			var corLibs = MakeUnstripHelper("corlibs");
 			var unityLibs = MakeUnstripHelper("libraries");

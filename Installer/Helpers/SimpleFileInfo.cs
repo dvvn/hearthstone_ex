@@ -1,17 +1,18 @@
 ﻿namespace Installer.Helpers;
 
-internal class SimpleFileInfo
+internal class SimpleFileInfo : SimpleFileSystemInfo
 {
 	private readonly int _nameOffset, _extensionOffset;
+	private readonly string _source;
 
-	public readonly string FullName;
-	public ReadOnlySpan<char> Directory => FullName.AsSpan( ).Slice(0, _nameOffset - 1);
-	public ReadOnlySpan<char> Name => FullName.AsSpan( ).Slice(_nameOffset /*, _extensionOffset - _nameOffset*/);
-	public ReadOnlySpan<char> Extension => FullName.AsSpan( ).Slice(_extensionOffset);
+	public override ReadOnlySpan<char> FullName => _source;
+	public SimpleDirectoryInfo Directory => new SimpleDirectoryInfoExternalSource(_source, FullName.Slice(0, _nameOffset - 1));
+	public override ReadOnlySpan<char> Name => FullName.Slice(_nameOffset /*, _extensionOffset - _nameOffset*/);
+	public ReadOnlySpan<char> Extension => FullName.Slice(_extensionOffset);
 
 	public SimpleFileInfo(string fullName, int nameLength, int extensionLength)
 	{
-		FullName = fullName;
+		_source = fullName;
 
 		_nameOffset = fullName.Length - nameLength;
 		_extensionOffset = fullName.Length - extensionLength;

@@ -28,14 +28,14 @@ internal static class HttpClientExtension
 
 	public static async Task Download(this HttpClient client, UnstripHelper unstripHelper)
 	{
-		var directory = unstripHelper.ToString( );
+		var directory = unstripHelper.OutDirectory;
 
 		if (!Directory.Exists(directory))
 			Directory.CreateDirectory(directory);
 		else if (Directory.EnumerateFiles(directory).Any( ))
 			return;
 
-		using var archive = new ZipArchive(await client.GetStreamAsync(unstripHelper.GetUrl( )));
+		using var archive = new ZipArchive(await client.GetStreamAsync(unstripHelper.BepinExUrl));
 
 		await Task.WhenAll(
 			archive.Entries.Select(
