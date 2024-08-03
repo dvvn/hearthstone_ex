@@ -1,9 +1,19 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 using Installer.Helpers;
 using Microsoft.Win32;
+using Mono.Cecil;
 
 namespace Installer;
+
+internal enum ArchitectureType
+{
+	X86 = 1 << 0
+  , X64 = 1 << 1
+  , AnyCpu = X86 | X64
+}
 
 internal static class Utils
 {
@@ -77,7 +87,6 @@ internal static class Utils
 		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
 	}
 
-	[Obsolete]
 	public static ReadOnlySpan<char> FindParentDirectory(ReadOnlySpan<char> dir, ReadOnlySpan<char> directoryName)
 	{
 		for (var tmpDir = Path.TrimEndingDirectorySeparator(dir); tmpDir != null; tmpDir = Path.GetDirectoryName(tmpDir))
@@ -89,155 +98,312 @@ internal static class Utils
 		throw new FileNotFoundException($"Unable to directory ${directoryName}!");
 	}
 
-	public static string GetWorkingDirectory( )
+	/*public static string GetWorkingDirectory( )
 	{
 		var selfPath = Assembly.GetExecutingAssembly( ).Location;
 		return Path.GetDirectoryName(selfPath);
-	}
+	}*/
 
-	public static ReadOnlySpan<char> GetWorkingDirectoryAsSpan( )
+	public static ReadOnlySpan<char> GetWorkingDirectory( )
 	{
 		var selfPath = Assembly.GetExecutingAssembly( ).Location;
 		return Path.GetDirectoryName(selfPath.AsSpan( ));
 	}
 
-	public static string GetInstallDirectory(string applicationName)
+	public static ReadOnlySpan<char> TryGetInstallDirectory(ReadOnlySpan<char> applicationName)
 	{
-		return TryGetKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall") ?? //
-			   TryGetKeyEx(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall") ??
-			   throw new FileNotFoundException($"Unable to find install directory for {applicationName}");
-
-		string TryGetKey(string subKeyPath)
+		var testPath = PathEx.Combine(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", applicationName);
+		using (var root = Registry.LocalMachine.OpenSubKey(testPath))
 		{
-			var keyName = Path.Combine(subKeyPath, applicationName);
-			using var root = Registry.LocalMachine.OpenSubKey(keyName);
-			return root != null ? GetInstallSource(root) : null;
-		}
-
-		string TryGetKeyEx(string subKeyPath)
-		{
-			using var root = Registry.LocalMachine.OpenSubKey(subKeyPath);
 			if (root != null)
-				foreach (var subkeyName in root.GetSubKeyNames( ))
-				{
-					using var key = root.OpenSubKey(subkeyName);
-					if (key == null)
-						continue;
-					if (key.GetValue("DisplayName") is not string name)
-						continue;
-					if (!name.Contains(applicationName))
-						continue;
-					var installSource = GetInstallSource(key);
-					if (installSource == null)
-						continue;
-					return installSource;
-				}
-
-			return null;
+			{
+				var dir = ExtrackPath(root);
+				if (dir != null)
+					return dir;
+			}
 		}
 
-		string GetInstallSource(RegistryKey key)
+		using (var root = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"))
+		{
+			Debug.Assert(root != null);
+			foreach (var subkeyName in root.GetSubKeyNames( ))
+			{
+				using var key = root.OpenSubKey(subkeyName);
+				if (key == null)
+					continue;
+				if (key.GetValue("DisplayName") is not string name)
+					continue;
+				if (!name.AsSpan( ).Contains(applicationName, StringComparison.Ordinal))
+					continue;
+				var dir = ExtrackPath(root);
+				if (dir != null)
+					return dir;
+			}
+		}
+
+		return null;
+
+		ReadOnlySpan<char> ExtrackPath(RegistryKey key)
 		{
 			if (key.GetValue("InstallSource") is string installSource)
 				return installSource;
 			if (key.GetValue("InstallLocation") is string installLocation)
 				return installLocation;
+			if (key.GetValue("UninstallString") is string uninstallString)
+				return Path.GetDirectoryName(uninstallString.AsSpan( ));
 			return null;
 		}
 	}
 
-	public static string GetFileArchitecture(string filePath)
+	public static ReadOnlySpan<char> GetInstallDirectory(string applicationName)
+	{
+		var result = TryGetInstallDirectory(applicationName);
+		if (result == null)
+			throw new FileNotFoundException($"Unable to find install directory for {applicationName}");
+		return result;
+	}
+
+	public static ArchitectureType GetFileArchitecture(string filePath)
 	{
 		using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
 		using var reader = new PEReader(stream);
 
-		if (reader.PEHeaders.PEHeader != null)
+		var corHeader = reader.PEHeaders.CorHeader;
+		if (corHeader != null) //managed
 		{
-			switch (reader.PEHeaders.PEHeader.Magic)
+			var flags = corHeader.Flags;
+
+			var isILOnly = (flags & CorFlags.ILOnly) != 0;
+			var requires32Bit = (flags & CorFlags.Requires32Bit) != 0;
+
+			if (isILOnly && !requires32Bit)
+				return ArchitectureType.AnyCpu;
+			if (requires32Bit)
+				return ArchitectureType.X86;
+		}
+
+		var peHeader = reader.PEHeaders.PEHeader;
+		if (peHeader != null) //native
+		{
+			switch (peHeader.Magic)
 			{
 				case PEMagic.PE32:
-					return "x86";
+					return ArchitectureType.X86;
 				case PEMagic.PE32Plus:
-					return "x64";
+					return ArchitectureType.X64;
 			}
 		}
 
-		if (reader.PEHeaders.CorHeader != null)
+		switch (reader.PEHeaders.CoffHeader.Machine)
 		{
-			var flags = reader.PEHeaders.CorHeader.Flags;
-			if ((flags & CorFlags.ILOnly) != 0 && (flags & CorFlags.Requires32Bit) == 0)
-				return "AnyCPU";
-			if ((flags & CorFlags.Requires32Bit) != 0)
-				return "x86";
+			case Machine.I386:
+				return ArchitectureType.X86;
+			case Machine.Amd64:
+				return ArchitectureType.X64;
+			//case Machine.Arm:
+			//	return "ARM";
+			//case Machine.Arm64:
+			//	return "ARM64";
 		}
 
-		throw new InvalidOperationException("Unable to determine the architecture of the File.");
+		throw new InvalidOperationException("Unable to determine the architecture of the file.");
 	}
 
-	public static string GetFileArchitecture(ReadOnlySpan<char> filePath)
+	public static ArchitectureType GetFileArchitecture(ReadOnlySpan<char> filePath)
 	{
 		return GetFileArchitecture(filePath.ToString( ));
+	}
+
+	public static Version GetDotNetFrameworkVersion(string filePath)
+	{
+		var assembly = AssemblyDefinition.ReadAssembly(filePath);
+		var targetAttribute = assembly.CustomAttributes.FirstOrDefault(attr => attr.AttributeType.FullName.Contains("Version"))
+						   ?? throw new InvalidOperationException("Unable to determine the .NET Framework version.");
+		var rawVersion = targetAttribute.ConstructorArguments[0].Value.ToString( );
+		var offset = rawVersion.TakeWhile(c => !char.IsAsciiDigit(c)).Count( );
+
+		return Version.Parse(rawVersion.AsSpan(offset));
+	}
+
+	public static Version GetDotNetFrameworkVersion(ReadOnlySpan<char> filePath)
+	{
+		return GetDotNetFrameworkVersion(filePath.ToString( ));
 	}
 }
 
 internal static class PathEx
 {
-	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2)
+	private class CombineHelper(int bufferLength, int partsCount)
 	{
-		var path1EndsInSeparator = Path.EndsInDirectorySeparator(path1);
-		var path2StartsInSeparator = path2.Length > 0 && path2[0] == Path.DirectorySeparatorChar;
-
-		var combinedLength = path1.Length + path2.Length + (path1EndsInSeparator || path2StartsInSeparator ? 0 : 1);
-		var result = new char[combinedLength];
-
-		path1.CopyTo(result.AsSpan(0, path1.Length));
-		var index = path1.Length;
-
-		if (!path1EndsInSeparator && !path2StartsInSeparator)
+		private class ValidatorDebug(int partsCount)
 		{
-			result[index] = Path.DirectorySeparatorChar;
-			index++;
+			private int _partsAdded;
+			private readonly string[ ] _parts = new string[partsCount];
+
+			public void StorePart(ReadOnlySpan<char> path)
+			{
+				_parts[_partsAdded] = path.ToString( );
+				++_partsAdded;
+			}
+
+			public string ToString(char[ ] buffer)
+			{
+				var result = Path.Combine(_parts);
+				if (!result.SequenceEqual(buffer))
+					throw new InvalidOperationException("The combined path does not match the expected buffer.");
+				return result;
+			}
 		}
 
-		path2.CopyTo(result.AsSpan(index, path2.Length));
+		private class Validator
+		{
+			public static void StorePart(ReadOnlySpan<char> path)
+			{
+			}
 
-		return new(result);
+			public static string ToString(char[ ] buffer)
+			{
+				return new(buffer);
+			}
+		}
+
+		private readonly char[ ] _buffer = new char[bufferLength];
+		private int _offset;
+
+#if DEBUG
+		private readonly ValidatorDebug _validator = new(partsCount);
+#else
+		[SuppressMessage("Style", "IDE1006")]
+		// ReSharper disable once ClassNeverInstantiated.Local
+		private class _validator : Validator;
+#endif
+
+		private void AppendInternal(ReadOnlySpan<char> path)
+		{
+			path.CopyTo(_buffer.AsSpan(_offset));
+			_offset += path.Length;
+			_buffer[_offset] = Path.DirectorySeparatorChar;
+			++_offset;
+			_validator.StorePart(path);
+		}
+
+		public void AppendFirst(ReadOnlySpan<char> path)
+		{
+			Debug.Assert(_offset == 0);
+			AppendInternal(path);
+			Debug.Assert(_offset < _buffer.Length);
+		}
+
+		public void Append(ReadOnlySpan<char> path)
+		{
+			Debug.Assert(_offset > 0);
+			AppendInternal(path);
+			Debug.Assert(_offset < _buffer.Length);
+		}
+
+		public void AppendLast(ReadOnlySpan<char> path)
+		{
+			path.CopyTo(_buffer.AsSpan(_offset));
+			Debug.Assert((_offset += path.Length) == _buffer.Length);
+			_validator.StorePart(path);
+		}
+
+		public override string ToString( )
+		{
+			return _validator.ToString(_buffer);
+		}
+
+		public static int PrepareFirst(ref ReadOnlySpan<char> path)
+		{
+			if (Path.EndsInDirectorySeparator(path))
+				path = path.Slice(0, path.Length - 1);
+			return path.Length + 1;
+		}
+
+		public static int Prepare(ref ReadOnlySpan<char> path)
+		{
+			return PrepareLast(ref path) + 1;
+		}
+
+		public static int PrepareLast(ref ReadOnlySpan<char> path)
+		{
+			var startOffset = path[0] == Path.AltDirectorySeparatorChar || path[0] == Path.AltDirectorySeparatorChar ? 1 : 0;
+			var endOffset = Path.EndsInDirectorySeparator(path) ? 1 : 0;
+
+			if (startOffset != 0 || endOffset != 0)
+				path = path.Slice(startOffset, path.Length - endOffset);
+
+			return path.Length;
+		}
+	}
+
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2)
+	{
+		var helper = new CombineHelper(
+			CombineHelper.PrepareFirst(ref path1)
+		  + CombineHelper.PrepareLast(ref path2), 2);
+		helper.AppendFirst(path1);
+		helper.AppendLast(path2);
+		return helper.ToString( );
 	}
 
 	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3)
 	{
-		var path1EndsInSeparator = Path.EndsInDirectorySeparator(path1);
-		var path2EndsInSeparator = Path.EndsInDirectorySeparator(path2);
-		var path2StartsInSeparator = path2.Length > 0 && path2[0] == Path.DirectorySeparatorChar;
-		var path3StartsInSeparator = path3.Length > 0 && path3[0] == Path.DirectorySeparatorChar;
+		var helper = new CombineHelper(
+			CombineHelper.PrepareFirst(ref path1)
+		  + CombineHelper.Prepare(ref path2)
+		  + CombineHelper.PrepareLast(ref path3), 3);
+		helper.AppendFirst(path1);
+		helper.Append(path2);
+		helper.AppendLast(path3);
+		return helper.ToString( );
+	}
 
-		var combinedLength = path1.Length + path2.Length + path3.Length;
-		if (!path1EndsInSeparator && !path2StartsInSeparator) combinedLength++;
-		if (!path2EndsInSeparator && !path3StartsInSeparator) combinedLength++;
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3, ReadOnlySpan<char> path4)
+	{
+		var helper = new CombineHelper(
+			CombineHelper.PrepareFirst(ref path1)
+		  + CombineHelper.Prepare(ref path2)
+		  + CombineHelper.Prepare(ref path3)
+		  + CombineHelper.PrepareLast(ref path4), 4);
+		helper.AppendFirst(path1);
+		helper.Append(path2);
+		helper.Append(path3);
+		helper.AppendLast(path4);
+		return helper.ToString( );
+	}
 
-		var result = new char[combinedLength];
-		var index = 0;
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3, ReadOnlySpan<char> path4, ReadOnlySpan<char> path5)
+	{
+		var helper = new CombineHelper(
+			CombineHelper.PrepareFirst(ref path1)
+		  + CombineHelper.Prepare(ref path2)
+		  + CombineHelper.Prepare(ref path3)
+		  + CombineHelper.Prepare(ref path4)
+		  + CombineHelper.PrepareLast(ref path5), 5);
+		helper.AppendFirst(path1);
+		helper.Append(path2);
+		helper.Append(path3);
+		helper.Append(path4);
+		helper.AppendLast(path5);
+		return helper.ToString( );
+	}
 
-		path1.CopyTo(result.AsSpan(index, path1.Length));
-		index += path1.Length;
-
-		if (!path1EndsInSeparator && !path2StartsInSeparator)
-		{
-			result[index] = Path.DirectorySeparatorChar;
-			index++;
-		}
-
-		path2.CopyTo(result.AsSpan(index, path2.Length));
-		index += path2.Length;
-
-		if (!path2EndsInSeparator && !path3StartsInSeparator)
-		{
-			result[index] = Path.DirectorySeparatorChar;
-			index++;
-		}
-
-		path3.CopyTo(result.AsSpan(index, path3.Length));
-
-		return new(result);
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3, ReadOnlySpan<char> path4, ReadOnlySpan<char> path5, ReadOnlySpan<char> path6)
+	{
+		var helper = new CombineHelper(
+			CombineHelper.PrepareFirst(ref path1)
+		  + CombineHelper.Prepare(ref path2)
+		  + CombineHelper.Prepare(ref path3)
+		  + CombineHelper.Prepare(ref path4)
+		  + CombineHelper.Prepare(ref path5)
+		  + CombineHelper.PrepareLast(ref path6), 6);
+		helper.AppendFirst(path1);
+		helper.Append(path2);
+		helper.Append(path3);
+		helper.Append(path4);
+		helper.Append(path5);
+		helper.AppendLast(path6);
+		return helper.ToString( );
 	}
 }

@@ -20,6 +20,10 @@ namespace Doorstop
 		// ReSharper disable once UnusedMember.Global
 		public static void Start( )
 		{
+			Import.MessageBox((IntPtr)0, "test", "Msg", 0);
+
+			return;
+
 			try
 			{
 				AppDomain.CurrentDomain.FirstChanceException += (sender, eventArgs) =>

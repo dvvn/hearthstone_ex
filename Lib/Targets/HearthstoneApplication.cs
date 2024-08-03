@@ -15,7 +15,7 @@ namespace hearthstone_ex.Targets
 		{
 			Loader.OnGameStartup(__instance);
 			Logger.Message("Started!", sourceLineNumber: 0);
-			Logger.Message(RuntimeInformation.FrameworkDescription, sourceLineNumber: 0);
+			//Logger.Message(RuntimeInformation.FrameworkDescription, sourceLineNumber: 0);
 			Logger.Message($"CLR: {Environment.Version}", sourceLineNumber: 0);
 		}
 

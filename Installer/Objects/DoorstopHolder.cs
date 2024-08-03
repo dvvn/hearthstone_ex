@@ -57,45 +57,62 @@ internal class DoorstopHolder : IAsyncDisposable
 		var dllFileChecked = false;
 		var configFileChecked = false;
 
-		foreach (var entry in archive.Entries.Where(e => e.Length != 0 && e.FullName.StartsWith(architecture)))
+		foreach (var entry in archive.Entries.Where(e => e.Length != 0 && e.FullName.StartsWith(architecture, StringComparison.OrdinalIgnoreCase)))
 		{
 			if (!dllFileChecked)
 			{
-				if (TryOpenEntry(entry, _dllFile, ref _dllData))
+				if (TryOpenEntry(entry, _dllFile, out _dllData))
 				{
-					if (configFileChecked)
+					if (AllDone(configFileChecked, ref dllFileChecked))
 						break;
-					dllFileChecked = true;
 					continue;
 				}
 			}
 
 			if (!configFileChecked)
 			{
-				Stream stream = null;
-				if (TryOpenEntry(entry, _configFile, ref stream))
+				if (TryOpenEntry(entry, _configFile, out var stream))
 				{
 					using var reader = new StreamReader(stream);
 					var lines = await reader.ReadToEndAsync( );
 					_configData = lines.Split(Environment.NewLine /*, StringSplitOptions.RemoveEmptyEntries*/);
 
-					if (dllFileChecked)
+					if (AllDone(dllFileChecked, ref configFileChecked))
 						break;
-					configFileChecked = true;
+					continue;
 				}
 			}
 		}
 
-		bool TryOpenEntry(ZipArchiveEntry entry, SimpleFileInfo info, ref Stream stream)
+		Debug.Assert(dllFileChecked && _dllData != null);
+		Debug.Assert(configFileChecked && _configData != null);
+
+		// ReSharper disable once RedundantAssignment
+		bool AllDone(bool other, ref bool current)
 		{
-			var result = entry.FullName.AsSpan( ).EndsWith(info.Extension);
-			if (result)
+			if (other)
+			{
+#if DEBUG
+				current = true;
+#endif
+				return true;
+			}
+
+			current = true;
+			return false;
+		}
+
+		bool TryOpenEntry(ZipArchiveEntry entry, SimpleFileInfo info, out Stream stream)
+		{
+			if (entry.FullName.AsSpan( ).EndsWith(info.Extension))
 			{
 				Debug.Assert(info.Name.SequenceEqual(entry.Name));
 				stream = entry.Open( );
+				return true;
 			}
 
-			return result;
+			stream = null;
+			return false;
 		}
 	}
 

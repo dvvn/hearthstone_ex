@@ -9,15 +9,15 @@ internal readonly struct UnityExecutableInfo
 
 #if DEBUG
 	private readonly FileVersionInfo _versionInfo;
-	private ReadOnlySpan<char> _product => _versionInfo.ProductVersion;
+	private string _product => _versionInfo.ProductVersion;
 #else
 	private readonly string _productVersion;
-	private ReadOnlySpan<char> _product => _productVersion;
+	private string _product => _productVersion;
 #endif
 
-	public ReadOnlySpan<char> FileVersion => _product.Slice(0, _buildTypeOffset);
-	public ReadOnlySpan<char> ProductVersion => _product.Slice(0, _buildTypeOffset + _buildTypeLength);
-	public ReadOnlySpan<char> BuildType => _product.Slice(_buildTypeOffset, _buildTypeLength);
+	public ReadOnlySpan<char> FileVersion => _product.AsSpan(0, _buildTypeOffset);
+	public ReadOnlySpan<char> ProductVersion => _product.AsSpan(0, _buildTypeOffset + _buildTypeLength);
+	public ReadOnlySpan<char> BuildType => _product.AsSpan(_buildTypeOffset, _buildTypeLength);
 
 	public ReadOnlySpan<char> ProductCode
 	{
@@ -25,7 +25,7 @@ internal readonly struct UnityExecutableInfo
 		{
 			const string codeOpen = " (";
 			const string codeClose = ")";
-			var start = _product.Slice(_buildTypeOffset + _buildTypeLength + codeOpen.Length);
+			var start = _product.AsSpan(_buildTypeOffset + _buildTypeLength + codeOpen.Length);
 			return start.Slice(0, start.Length - codeClose.Length);
 		}
 	}
@@ -43,8 +43,8 @@ internal readonly struct UnityExecutableInfo
 #endif
 
 		var codeIndex = _product.IndexOf(' ');
-		var lastPartIndex = _product.Slice(0, codeIndex).LastIndexOf('.') + 1;
-		var lastPart = _product.Slice(lastPartIndex, codeIndex - lastPartIndex);
+		var lastPartIndex = _product.AsSpan(0, codeIndex).LastIndexOf('.') + 1;
+		var lastPart = _product.AsSpan(lastPartIndex, codeIndex - lastPartIndex);
 		// a == alpha
 		// b == beta
 		// r == rc == release candidate

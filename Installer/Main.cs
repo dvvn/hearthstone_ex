@@ -7,32 +7,45 @@ using Octokit;
 
 namespace Installer;
 
-internal class Installer
+internal static class Installer
 {
 	public static async Task Main(string[ ] args)
 	{
-		await Run( );
+		try
+		{
+			await Run( );
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine(e);
+			Console.ReadKey( );
+		}
 	}
 
 	private static async Task Run( )
 	{
-		var hsFile = new SimpleFileInfo(Path.Combine(Utils.GetInstallDirectory("Hearthstone"), "Hearthstone.exe"));
+		var hsFile = new SimpleFileInfo(PathEx.Combine(Utils.GetInstallDirectory("Hearthstone"), "Hearthstone.exe"));
 		var hsUnityInfo = new UnityExecutableInfo(hsFile.FullName);
-		var hsUnityVersion = hsUnityInfo.FileVersion.ToString( );
+		var hsArch = Utils.GetFileArchitecture(hsFile.FullName);
+		var hsDotNetVerison = Utils.GetDotNetFrameworkVersion(PathEx.Combine(hsFile.Directory.FullName, "Hearthstone_Data", "Managed", "System.dll"));
 
-		var libFile = Utils.FindInParentDirectory(Utils.GetWorkingDirectoryAsSpan( ), "hearthstone_ex.dll");
+		var libFile = Utils.FindInParentDirectory(Utils.GetWorkingDirectory( ), "hearthstone_ex.dll");
 		var libArch = Utils.GetFileArchitecture(libFile.FullName);
+		var libDotNetVersion = Utils.GetDotNetFrameworkVersion(libFile.FullName);
 
-		Debug.Assert(Utils.GetFileArchitecture(hsFile.FullName).SequenceEqual(libArch));
+		if (hsArch != libArch)
+			throw new PlatformNotSupportedException($"Set library architecture to {hsArch}!");
+		if (hsDotNetVerison.Major != libDotNetVersion.Major || hsDotNetVerison.Minor != libDotNetVersion.Minor)
+			throw new PlatformNotSupportedException($"Set library .NET Framevork version to {hsDotNetVerison}!");
 
 		using var httpClient = new HttpClient( );
 		await using var doorstopHolder = new DoorstopHolder(hsFile.Directory);
 
-		await doorstopHolder.Update(await GetDoorstopArchive( ), libArch);
-		var unstrippedDLLs = await FindUnstrippedDLLs( );
+		await doorstopHolder.Update(await DownloadDoorstopArchive( ), libArch.ToString( ));
+		var unstrippedDLLs = FindUnstrippedDLLs( ) ?? await DownloadUnstrippedDLLs( );
 		doorstopHolder.Write(libFile.FullName, unstrippedDLLs);
 
-		async Task<ZipArchive> GetDoorstopArchive( )
+		async Task<ZipArchive> DownloadDoorstopArchive( )
 		{
 			var gitClient = new GitHubClient(new ProductHeaderValue(DateTime.Now.Ticks.ToString( )));
 
@@ -42,20 +55,28 @@ internal class Installer
 			return new(stream);
 		}
 
-		async Task<string> FindUnstrippedDLLs( )
+		string FindUnstrippedDLLs( )
 		{
-			//todo: check for unity installed. if true, use dlls from there
+			var unityInstallDir = Utils.TryGetInstallDirectory($"Unity {hsUnityInfo.ProductVersion}");
+			if (unityInstallDir == null)
+				return null;
 
-			var unityLocalDir = PathEx.Combine(Utils.FindParentDirectory(libFile.Directory.FullName, "bin"), "unity");
+			var corLibsDir = PathEx.Combine(unityInstallDir, "Data", "MonoBleedingEdge", "lib", "mono", $"{hsDotNetVerison.Major}.{hsDotNetVerison.Minor}-api");
+			var unityLibsDir = PathEx.Combine(unityInstallDir, "Data", "Managed");
+			var unityLibsDir2 = Path.Combine(unityLibsDir, "UnityEngine");
+			return string.Join(';', corLibsDir, unityLibsDir, unityLibsDir2);
+		}
 
-			var corLibs = MakeUnstripHelper("corlibs");
-			var unityLibs = MakeUnstripHelper("libraries");
+		async Task<string> DownloadUnstrippedDLLs( )
+		{
+			var builder = new UnstripHelper.Builder(PathEx.Combine(Utils.FindParentDirectory(libFile.Directory.FullName, "bin"), "unity"), hsUnityInfo.FileVersion.ToString( ));
+
+			var corLibs = builder.Get("corlibs");
+			var unityLibs = builder.Get("libraries");
 
 			await Task.WhenAll(httpClient.Download(corLibs), httpClient.Download(unityLibs));
 
-			return string.Join(';', corLibs, unityLibs);
-
-			UnstripHelper MakeUnstripHelper(string type) => new(unityLocalDir, type, hsUnityVersion);
+			return string.Join(';', corLibs.OutDirectory, unityLibs.OutDirectory);
 		}
 	}
 }
