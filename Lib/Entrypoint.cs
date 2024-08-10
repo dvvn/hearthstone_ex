@@ -20,9 +20,7 @@ namespace Doorstop
 		// ReSharper disable once UnusedMember.Global
 		public static void Start( )
 		{
-			Import.MessageBox((IntPtr)0, "test", "Msg", 0);
-
-			return;
+			Import.MessageBox((IntPtr)0, "begin", "Msg", 0);
 
 			try
 			{
@@ -34,12 +32,14 @@ namespace Doorstop
 				{
 					Import.MessageBox((IntPtr)0, eventArgs.ExceptionObject.ToString( ), "Unhandled exception", 0);
 				};
-				hearthstone_ex.Loader.Start( );
+				//hearthstone_ex.Loader.Start( );
 			}
 			catch (Exception e)
 			{
 				Import.MessageBox((IntPtr)0, e.ToString( ), "Error", 0);
 			}
+
+			Import.MessageBox((IntPtr)0, "end", "Msg", 0);
 		}
 	}
 }

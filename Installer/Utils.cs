@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
 using Installer.Helpers;
@@ -110,17 +109,12 @@ internal static class Utils
 		return Path.GetDirectoryName(selfPath.AsSpan( ));
 	}
 
-	public static ReadOnlySpan<char> TryGetInstallDirectory(ReadOnlySpan<char> applicationName)
+	private static IEnumerable<RegistryKey> EnumerateUninstallDirectories(string applicationName)
 	{
-		var testPath = PathEx.Combine(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", applicationName);
-		using (var root = Registry.LocalMachine.OpenSubKey(testPath))
+		using (var root = Registry.LocalMachine.OpenSubKey(Path.Combine(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", applicationName)))
 		{
 			if (root != null)
-			{
-				var dir = ExtrackPath(root);
-				if (dir != null)
-					return dir;
-			}
+				yield return root;
 		}
 
 		using (var root = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"))
@@ -135,15 +129,19 @@ internal static class Utils
 					continue;
 				if (!name.AsSpan( ).Contains(applicationName, StringComparison.Ordinal))
 					continue;
-				var dir = ExtrackPath(root);
-				if (dir != null)
-					return dir;
+				yield return key;
 			}
 		}
+	}
 
-		return null;
+	public static bool IsSoftwareInstalled(string applicationName)
+	{
+		return EnumerateUninstallDirectories(applicationName).Any( );
+	}
 
-		ReadOnlySpan<char> ExtrackPath(RegistryKey key)
+	public static ReadOnlySpan<char> TryGetInstallDirectory(string applicationName)
+	{
+		foreach (var key in EnumerateUninstallDirectories(applicationName))
 		{
 			if (key.GetValue("InstallSource") is string installSource)
 				return installSource;
@@ -151,8 +149,9 @@ internal static class Utils
 				return installLocation;
 			if (key.GetValue("UninstallString") is string uninstallString)
 				return Path.GetDirectoryName(uninstallString.AsSpan( ));
-			return null;
 		}
+
+		return null;
 	}
 
 	public static ReadOnlySpan<char> GetInstallDirectory(string applicationName)
@@ -218,7 +217,7 @@ internal static class Utils
 	{
 		var assembly = AssemblyDefinition.ReadAssembly(filePath);
 		var targetAttribute = assembly.CustomAttributes.FirstOrDefault(attr => attr.AttributeType.FullName.Contains("Version"))
-						   ?? throw new InvalidOperationException("Unable to determine the .NET Framework version.");
+			?? throw new InvalidOperationException("Unable to determine the .NET Framework version.");
 		var rawVersion = targetAttribute.ConstructorArguments[0].Value.ToString( );
 		var offset = rawVersion.TakeWhile(c => !char.IsAsciiDigit(c)).Count( );
 
@@ -341,7 +340,7 @@ internal static class PathEx
 	{
 		var helper = new CombineHelper(
 			CombineHelper.PrepareFirst(ref path1)
-		  + CombineHelper.PrepareLast(ref path2), 2);
+			+ CombineHelper.PrepareLast(ref path2), 2);
 		helper.AppendFirst(path1);
 		helper.AppendLast(path2);
 		return helper.ToString( );
@@ -351,8 +350,8 @@ internal static class PathEx
 	{
 		var helper = new CombineHelper(
 			CombineHelper.PrepareFirst(ref path1)
-		  + CombineHelper.Prepare(ref path2)
-		  + CombineHelper.PrepareLast(ref path3), 3);
+			+ CombineHelper.Prepare(ref path2)
+			+ CombineHelper.PrepareLast(ref path3), 3);
 		helper.AppendFirst(path1);
 		helper.Append(path2);
 		helper.AppendLast(path3);
@@ -363,9 +362,9 @@ internal static class PathEx
 	{
 		var helper = new CombineHelper(
 			CombineHelper.PrepareFirst(ref path1)
-		  + CombineHelper.Prepare(ref path2)
-		  + CombineHelper.Prepare(ref path3)
-		  + CombineHelper.PrepareLast(ref path4), 4);
+			+ CombineHelper.Prepare(ref path2)
+			+ CombineHelper.Prepare(ref path3)
+			+ CombineHelper.PrepareLast(ref path4), 4);
 		helper.AppendFirst(path1);
 		helper.Append(path2);
 		helper.Append(path3);
@@ -377,10 +376,10 @@ internal static class PathEx
 	{
 		var helper = new CombineHelper(
 			CombineHelper.PrepareFirst(ref path1)
-		  + CombineHelper.Prepare(ref path2)
-		  + CombineHelper.Prepare(ref path3)
-		  + CombineHelper.Prepare(ref path4)
-		  + CombineHelper.PrepareLast(ref path5), 5);
+			+ CombineHelper.Prepare(ref path2)
+			+ CombineHelper.Prepare(ref path3)
+			+ CombineHelper.Prepare(ref path4)
+			+ CombineHelper.PrepareLast(ref path5), 5);
 		helper.AppendFirst(path1);
 		helper.Append(path2);
 		helper.Append(path3);
@@ -389,15 +388,16 @@ internal static class PathEx
 		return helper.ToString( );
 	}
 
-	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3, ReadOnlySpan<char> path4, ReadOnlySpan<char> path5, ReadOnlySpan<char> path6)
+	public static string Combine(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2, ReadOnlySpan<char> path3, ReadOnlySpan<char> path4, ReadOnlySpan<char> path5
+							   , ReadOnlySpan<char> path6)
 	{
 		var helper = new CombineHelper(
 			CombineHelper.PrepareFirst(ref path1)
-		  + CombineHelper.Prepare(ref path2)
-		  + CombineHelper.Prepare(ref path3)
-		  + CombineHelper.Prepare(ref path4)
-		  + CombineHelper.Prepare(ref path5)
-		  + CombineHelper.PrepareLast(ref path6), 6);
+			+ CombineHelper.Prepare(ref path2)
+			+ CombineHelper.Prepare(ref path3)
+			+ CombineHelper.Prepare(ref path4)
+			+ CombineHelper.Prepare(ref path5)
+			+ CombineHelper.PrepareLast(ref path6), 6);
 		helper.AppendFirst(path1);
 		helper.Append(path2);
 		helper.Append(path3);

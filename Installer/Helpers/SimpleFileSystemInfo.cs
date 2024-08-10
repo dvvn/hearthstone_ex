@@ -1,5 +1,8 @@
-﻿namespace Installer.Helpers;
+﻿using System.Diagnostics;
 
+namespace Installer.Helpers;
+
+[DebuggerDisplay("{FullName}")]
 internal abstract class SimpleFileSystemInfo
 {
 	public abstract ReadOnlySpan<char> FullName { get; }

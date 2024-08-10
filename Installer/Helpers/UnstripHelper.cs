@@ -12,7 +12,7 @@ internal class UnstripHelper(string rootDirectory, string type, string version)
 
 	public string RootDirectory => rootDirectory;
 	public string OutDirectory => Path.Combine(rootDirectory, type, version);
-	public Uri BepinExUrl => new($"https://unity.bepinex.dev/{type}/{version}.zip");
+	public string DownloadUrl => $"https://unity.bepinex.dev/{type}/{version}.zip";
 
 	public override string ToString( )
 	{

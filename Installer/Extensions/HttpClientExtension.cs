@@ -26,23 +26,25 @@ internal static class HttpClientExtension
 		return response.Content.Headers.ContentLength.Value;
 	}
 
-	public static async Task Download(this HttpClient client, UnstripHelper unstripHelper)
+	public static async Task<string> Download(this HttpClient client, UnstripHelper unstripHelper)
 	{
 		var directory = unstripHelper.OutDirectory;
 
-		if (!Directory.Exists(directory))
-			Directory.CreateDirectory(directory);
-		else if (Directory.EnumerateFiles(directory).Any( ))
-			return;
+		Directory.CreateDirectory(directory);
 
-		using var archive = new ZipArchive(await client.GetStreamAsync(unstripHelper.BepinExUrl));
+		if (!Directory.EnumerateFiles(directory).Any( ))
+		{
+			using var archive = new ZipArchive(await client.GetStreamAsync(unstripHelper.DownloadUrl));
 
-		await Task.WhenAll(
-			archive.Entries.Select(
-				e =>
-				{
-					Debug.Assert(e.Name == e.FullName);
-					return e.WriteTo(Path.Combine(directory, e.Name));
-				}));
+			await Task.WhenAll(
+				archive.Entries.Select(
+					e =>
+					{
+						Debug.Assert(e.Name == e.FullName);
+						return e.WriteTo(Path.Combine(directory, e.Name));
+					}));
+		}
+
+		return unstripHelper.OutDirectory;
 	}
 }

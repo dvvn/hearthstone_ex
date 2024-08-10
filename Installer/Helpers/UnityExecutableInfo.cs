@@ -2,6 +2,7 @@
 
 namespace Installer.Helpers;
 
+[DebuggerDisplay("{ProductVersion}")]
 internal readonly struct UnityExecutableInfo
 {
 	private readonly int _buildTypeLength;
@@ -31,6 +32,7 @@ internal readonly struct UnityExecutableInfo
 	}
 
 	public Uri EditorSetupUrl => new($"https://download.unity3d.com/download_unity/{ProductCode}/Windows64EditorInstaller/UnitySetup64-{ProductVersion}.exe");
+	public string ApplicationName => $"Unity {ProductVersion}";
 
 	public UnityExecutableInfo(string filePath)
 	{
