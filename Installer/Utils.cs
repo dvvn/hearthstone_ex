@@ -1,12 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
+using System.Runtime.Versioning;
 using Installer.Helpers;
 using Microsoft.Win32;
-using Mono.Cecil;
+using AssemblyDefinition = Mono.Cecil.AssemblyDefinition;
 
 namespace Installer;
 
+[Flags]
 internal enum ArchitectureType
 {
 	X86 = 1 << 0
@@ -213,15 +215,34 @@ internal static class Utils
 		return GetFileArchitecture(filePath.ToString( ));
 	}
 
-	public static Version GetDotNetFrameworkVersion(string filePath)
+	public static Version TryGetDotNetFrameworkVersion(string filePath)
 	{
 		var assembly = AssemblyDefinition.ReadAssembly(filePath);
-		var targetAttribute = assembly.CustomAttributes.FirstOrDefault(attr => attr.AttributeType.FullName.Contains("Version"))
-			?? throw new InvalidOperationException("Unable to determine the .NET Framework version.");
-		var rawVersion = targetAttribute.ConstructorArguments[0].Value.ToString( );
-		var offset = rawVersion.TakeWhile(c => !char.IsAsciiDigit(c)).Count( );
 
-		return Version.Parse(rawVersion.AsSpan(offset));
+		foreach (var attribute in assembly.CustomAttributes)
+		{
+			if (attribute.AttributeType.FullName == typeof(TargetFrameworkAttribute).FullName)
+			{
+				var rawVersion = attribute.ConstructorArguments[0].Value.ToString( );
+				var offset = rawVersion.TakeWhile(c => !char.IsAsciiDigit(c)).Count( );
+				return Version.Parse(rawVersion.AsSpan(offset));
+			}
+		}
+
+		foreach (var reference in assembly.MainModule.AssemblyReferences)
+		{
+			if (reference.Name is "mscorlib" or "System")
+			{
+				return reference.Version;
+			}
+		}
+
+		return null;
+	}
+
+	public static Version GetDotNetFrameworkVersion(string filePath)
+	{
+		return TryGetDotNetFrameworkVersion(filePath) ?? throw new InvalidOperationException("Unable to determine the .NET Framework version.");
 	}
 
 	public static Version GetDotNetFrameworkVersion(ReadOnlySpan<char> filePath)

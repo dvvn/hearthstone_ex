@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Debug = UnityEngine.Debug;
 
 //-
 //using _CallerMemberName = System.Runtime.CompilerServices.CallerMemberNameAttribute;
@@ -166,17 +165,17 @@ namespace hearthstone_ex.Utils
 
 		protected override void ErrorImpl(object msg)
 		{
-			Debug.LogError(msg);
+			//Debug.LogError(msg);
 		}
 
 		protected override void WarningImpl(object msg)
 		{
-			Debug.LogWarning(msg);
+			//Debug.LogWarning(msg);
 		}
 
 		protected override void MessageImpl(object msg)
 		{
-			Debug.Log(msg);
+			//Debug.Log(msg);
 		}
 	}
 	//todo: add console

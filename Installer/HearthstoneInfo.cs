@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Installer.Helpers;
+﻿using Installer.Helpers;
 using Installer.Objects;
 
 namespace Installer;
@@ -15,34 +14,40 @@ internal sealed class HearthstoneInfo : LibraryInfo
 	}
 
 	public HearthstoneInfo( )
-		: this(PathEx.Combine(Utils.GetInstallDirectory("Hearthstone"), "Hearthstone.exe"), Path.Combine("Hearthstone_Data", "Managed", "System.dll"))
+		: this(PathEx.Combine(Utils.GetInstallDirectory("Hearthstone"), "Hearthstone.exe"), @"Hearthstone_Data\Managed\System.dll")
 	{
 	}
 
-	public IEnumerable<string> FindUnstrippedDLLs( )
+	public async IAsyncEnumerable<string> EnumerateUnstrippedDLLs(HttpClient httpClient)
 	{
-		return Impl( ).Select(
-			s =>
-			{
-				Debug.Assert(Directory.Exists(s));
-				return s;
-			});
+		var rootDirectory = Path.GetDirectoryName(Utils.FindParentDirectory(Utils.GetWorkingDirectory( ), "bin")).ToString( );
 
-		IEnumerable<string> Impl( )
+		//todo: download / build / copy
+		yield return Path.Combine(rootDirectory, "UnstrippedLibs");
+
+		if (Utils.IsSoftwareInstalled(UnityInfo.ApplicationName))
+		{
+			foreach (var p in EnumerateUnityDlls( ))
+				yield return p;
+		}
+		else
+		{
+			var localUnityDir = Path.Combine(rootDirectory, "bin", "unity");
+			var builder = new BepInExUnstripHelper.Builder(localUnityDir, UnityInfo.FileVersion.ToString( ));
+
+			yield return await builder.Get("corlibs").Download(httpClient);
+			yield return await builder.Get("libraries").Download(httpClient);
+		}
+
+		IEnumerable<string> EnumerateUnityDlls( )
 		{
 			var unityInstallDir = Utils.GetInstallDirectory($"Unity {UnityInfo.ProductVersion}");
-			var dataDir = PathEx.Combine(unityInstallDir, "Data");
 
-			yield return Path.Combine(dataDir, "MonoBleedingEdge", "lib", "mono", $"net_{DotNetVersion.Major}_x-win32");
-			yield return Path.Combine(dataDir, "Managed", "UnityEngine");
+			var s1 = PathEx.Combine(unityInstallDir, @"Data\PlaybackEngines\windowsstandalonesupport\Variations\win32_player_development_mono\Data\Managed");
+			var s2 = PathEx.Combine(unityInstallDir, @"Data\MonoBleedingEdge\lib\mono\unityjit-win32");
+
+			yield return s1;
+			yield return s2;
 		}
-	}
-
-	public IEnumerable<UnstripHelper> UnstrippedDLLsDownloadPrepare(string outDir)
-	{
-		var builder = new UnstripHelper.Builder(outDir, UnityInfo.FileVersion.ToString( ));
-
-		yield return builder.Get("corlibs");
-		yield return builder.Get("libraries");
 	}
 }

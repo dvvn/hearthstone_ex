@@ -26,12 +26,11 @@ internal class LibraryInfo
 	{
 		var exceptions = new List<PlatformNotSupportedException>(2);
 
-		if (Architecture != ArchitectureType.AnyCpu && other.Architecture != ArchitectureType.AnyCpu)
-			if (Architecture != other.Architecture)
-				exceptions.Add(new($"Architecture mismatch: expected {other.Architecture}, but got {Architecture}."));
+		if ((Architecture & other.Architecture) == 0)
+			exceptions.Add(new($"Architecture mismatch: {Architecture}, {other.Architecture}."));
 
-		if (DotNetVersion.Major != other.DotNetVersion.Major || DotNetVersion.Minor != other.DotNetVersion.Minor)
-			exceptions.Add(new($"DotNetVersion mismatch: expected {other.DotNetVersion.Major}.{other.DotNetVersion.Minor}, but got {DotNetVersion.Major}.{DotNetVersion.Minor}."));
+		if (DotNetVersion.Major != other.DotNetVersion.Major || DotNetVersion.Minor > other.DotNetVersion.Minor)
+			exceptions.Add(new($"DotNetVersion mismatch: {DotNetVersion}, {other.DotNetVersion}."));
 
 		switch (exceptions.Count)
 		{

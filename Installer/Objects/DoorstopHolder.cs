@@ -8,10 +8,37 @@ using FileMode = System.IO.FileMode;
 
 namespace Installer.Objects;
 
+internal class DoorstopDllSearchPath
+{
+	private readonly string _value;
+
+	public DoorstopDllSearchPath(string value)
+	{
+		Debug.Assert(Directory.Exists(value));
+		_value = value;
+	}
+
+	public DoorstopDllSearchPath(IEnumerable<string> values)
+	{
+#if DEBUG
+		var values2 = values.ToArray( );
+		Debug.Assert(values2.All(Directory.Exists));
+#else
+		var values2 = values;
+#endif
+		_value = string.Join(';', values2);
+	}
+
+	public override string ToString( )
+	{
+		return _value;
+	}
+}
+
 internal ref struct DoorstopConfig
 {
 	public ReadOnlySpan<char> TargetAssembly;
-	public string DllSearchPathOverride;
+	public DoorstopDllSearchPath DllSearchPathOverride;
 	public IPEndPoint DebugAddress = new(IPAddress.Loopback, 10000);
 
 	public DoorstopConfig( )
@@ -31,18 +58,14 @@ internal class DoorstopConfigUpdater
 		_configData = configData;
 	}
 
-	private void Set(int index, string key, string value)
+	/*private void SetInternal(int index, string key, string value)
 	{
 		_configData[index] = $"{key}={value}";
-	}
+	}*/
 
-	private void Set(int index, string key, ReadOnlySpan<char> value)
+	private void SetInternal(int index, string key, ReadOnlySpan<char> value)
 	{
-		var data = new char[key.Length + 1 + value.Length];
-		key.CopyTo(data);
-		data[key.Length] = '=';
-		value.CopyTo(data.AsSpan(key.Length + 1));
-		_configData[index] = new(data);
+		_configData[index] = string.Concat(key, "=", value);
 	}
 
 	private int Find(string key)
@@ -61,24 +84,34 @@ internal class DoorstopConfigUpdater
 	public void Set(string key, ReadOnlySpan<char> value)
 	{
 		var index = Find(key);
-		Set(index, key, value);
+		SetInternal(index, key, value);
 		_usedIndex[index] = true;
 	}
 
 	public void Set(string key, bool value)
 	{
 		var index = Find(key);
-		Set(index, key, value ? "true" : "false");
+		SetInternal(index, key, value ? "true" : "false");
 		_usedIndex[index] = true;
+	}
+
+	public void Set(string key, DoorstopDllSearchPath value)
+	{
+		Set(key, value.ToString( ));
+	}
+
+	public void Set(string key, IPEndPoint value)
+	{
+		Set(key, value.ToString( ));
 	}
 }
 
 internal class DoorstopUpdateResult
 {
-	public Stream dllData;
-	public IList<string> configData;
+	public Stream DllData;
+	public IList<string> ConfigData;
 
-	public DoorstopConfigUpdater MakeConfigUpdater( ) => new(configData);
+	public DoorstopConfigUpdater MakeConfigUpdater( ) => new(ConfigData);
 }
 
 internal class DoorstopHolder
@@ -116,20 +149,20 @@ internal class DoorstopHolder
 
 		foreach (var entry in archive.Entries.Where(e => e.Length != 0 && e.FullName.StartsWith(architectureType.ToString( ), StringComparison.OrdinalIgnoreCase)))
 		{
-			if (result.dllData == null && TryOpenEntry(entry, _dllFile, out result.dllData))
+			if (result.DllData == null && TryOpenEntry(entry, _dllFile, out result.DllData))
 			{
-				if (result.configData != null)
+				if (result.ConfigData != null)
 					break;
 				continue;
 			}
 
-			if (result.configData == null && TryOpenEntry(entry, _configFile, out var stream))
+			if (result.ConfigData == null && TryOpenEntry(entry, _configFile, out var stream))
 			{
 				using var reader = new StreamReader(stream);
 				var lines = await reader.ReadToEndAsync( );
-				result.configData = lines.Split(Environment.NewLine /*, StringSplitOptions.RemoveEmptyEntries*/);
+				result.ConfigData = lines.Split(Environment.NewLine /*, StringSplitOptions.RemoveEmptyEntries*/);
 
-				if (result.dllData != null)
+				if (result.DllData != null)
 					break;
 				continue;
 			}
@@ -168,7 +201,7 @@ internal class DoorstopHolder
 #else
 		updater.Set("debug_enabled", false);
 #endif
-		updater.Set("debug_address", config.DebugAddress.ToString( ));
+		updater.Set("debug_address", config.DebugAddress);
 		updater.Set("debug_suspend", false);
 
 		return Task.Run(
@@ -176,8 +209,8 @@ internal class DoorstopHolder
 			{
 				await using var stream = new FileStream(_dllFile.FullName.ToString( ), FileMode.Create, FileAccess.Write);
 				await Task.WhenAll(
-					updateResult.dllData.CopyToAsync(stream),
-					File.WriteAllLinesAsync(_configFile.FullName.ToString( ), updateResult.configData));
+					updateResult.DllData.CopyToAsync(stream),
+					File.WriteAllLinesAsync(_configFile.FullName.ToString( ), updateResult.ConfigData));
 			});
 	}
 

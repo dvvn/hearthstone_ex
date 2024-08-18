@@ -1,5 +1,4 @@
-﻿using Installer.Extensions;
-using Installer.Objects;
+﻿using Installer.Objects;
 
 namespace Installer;
 
@@ -22,19 +21,13 @@ internal static class Installer
 	{
 		var hsInfo = new HearthstoneInfo( );
 		var libInfo = new InjectedLibraryInfo( );
-		
+
 		hsInfo.Verify(libInfo);
 
-		var httpClient = new HttpClient( );
-
 		var doorstopHolder = new DoorstopHolder(hsInfo.File.Directory);
+		var httpClient = new HttpClient( );
+		var dllSearchSources = hsInfo.EnumerateUnstrippedDLLs(httpClient).ToBlockingEnumerable( );
 		var doorstopUpdate = await doorstopHolder.Update(new(await httpClient.GetStreamAsync(await DoorstopHolder.GetDownloadUrl( ))), hsInfo.Architecture);
-		var dllSearchPath = string.Join(
-			';',
-			Utils.IsSoftwareInstalled(hsInfo.UnityInfo.ApplicationName) ?
-				hsInfo.FindUnstrippedDLLs( ) :
-				await Task.WhenAll(
-					hsInfo.UnstrippedDLLsDownloadPrepare(PathEx.Combine(Utils.FindParentDirectory(libInfo.File.Directory.FullName, "bin"), "unity")).Select(httpClient.Download)));
-		await doorstopHolder.Write(doorstopUpdate, new( ) { TargetAssembly = libInfo.File.FullName, DllSearchPathOverride = dllSearchPath });
+		await doorstopHolder.Write(doorstopUpdate, new( ) { TargetAssembly = libInfo.File.FullName, DllSearchPathOverride = new(dllSearchSources) });
 	}
 }

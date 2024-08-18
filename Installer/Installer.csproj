@@ -9,7 +9,8 @@
 		<BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
 		<BaseOutputPath Condition="'$(Platform)'=='AnyCPU'">$(SolutionDir)bin\any\</BaseOutputPath>
 		<Platforms>AnyCPU;x86</Platforms>
-		<TargetFramework>net8.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+		<SupportedOSPlatformVersion>8.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

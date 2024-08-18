@@ -1,7 +1,4 @@
-﻿using System.IO.Compression;
-using System.Net;
-using System.Diagnostics;
-using Installer.Helpers;
+﻿using System.Net;
 
 namespace Installer.Extensions;
 
@@ -26,25 +23,5 @@ internal static class HttpClientExtension
 		return response.Content.Headers.ContentLength.Value;
 	}
 
-	public static async Task<string> Download(this HttpClient client, UnstripHelper unstripHelper)
-	{
-		var directory = unstripHelper.OutDirectory;
-
-		Directory.CreateDirectory(directory);
-
-		if (!Directory.EnumerateFiles(directory).Any( ))
-		{
-			using var archive = new ZipArchive(await client.GetStreamAsync(unstripHelper.DownloadUrl));
-
-			await Task.WhenAll(
-				archive.Entries.Select(
-					e =>
-					{
-						Debug.Assert(e.Name == e.FullName);
-						return e.WriteTo(Path.Combine(directory, e.Name));
-					}));
-		}
-
-		return unstripHelper.OutDirectory;
-	}
+	
 }
